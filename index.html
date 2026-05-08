@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Jogo de Palavras - OCR + Imagens</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1923;
+      --surface: #1a2635;
+      --surface2: #243044;
+      --accent: #3b9eff;
+      --accent2: #00e5a0;
+      --danger: #ff4757;
+      --text: #e8edf5;
+      --muted: #7a8fa6;
+      --border: rgba(255,255,255,0.07);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent2);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .topbar-logo span { color: var(--muted); }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-ghost {
+      padding: 7px 16px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: none; color: var(--muted);
+      font-size: 13px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary {
+      padding: 8px 20px; border-radius: 8px;
+      border: none; background: var(--accent);
+      color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s; letter-spacing: 0.3px;
+    }
+    .btn-primary:hover { background: #2d8ae0; transform: translateY(-1px); }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-success {
+      padding: 8px 20px; border-radius: 8px;
+      border: none; background: var(--accent2);
+      color: #0f1923; font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .btn-success:hover { opacity: 0.88; }
+    .btn-danger {
+      padding: 8px 20px; border-radius: 8px;
+      border: none; background: var(--danger);
+      color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      min-height: calc(100vh - 60px);
+    }
+
+    .left-panel {
+      padding: 2rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .field input[type=text] {
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.15s;
+    }
+    .field input[type=text]:focus { outline: none; border-color: var(--accent); }
+
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      background: var(--surface);
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: var(--accent);
+      background: rgba(59, 158, 255, 0.05);
+    }
+    .upload-area .icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .upload-area p { color: var(--muted); font-size: 13px; }
+    .upload-area input[type=file] { display: none; }
+
+    .ocr-preview {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .ocr-preview img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    .ocr-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #0a1118;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .words-header {
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 100px 32px;
+      gap: 8px;
+      padding: 0 4px;
+      margin-bottom: 8px;
+    }
+    .words-header span {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .word-row {
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 100px 32px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+    .word-num {
+      width: 52px; height: 40px;
+      background: var(--surface2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .word-row input[type=text] {
+      height: 40px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .word-row input[type=text]:focus { outline: none; border-color: var(--accent); }
+
+    .word-img {
+      width: 100px; height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .word-img.loading {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .del-btn {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .del-btn:hover { color: var(--danger); background: rgba(255,71,87,0.1); }
+
+    .add-word-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+      background: none;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      margin-top: 4px;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .add-word-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 60px);
+      position: sticky;
+      top: 60px;
+    }
+
+    .preview-panel {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .preview-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      min-height: 50px;
+    }
+    .prev-card {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      font-size: 11px;
+      color: var(--muted);
+      min-width: 56px;
+    }
+    .prev-card .em { font-size: 18px; }
+    .prev-card.txt-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+
+    .output-panel {
+      flex: 1;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .code-wrap {
+      flex: 1;
+      background: #0a1118;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-toolbar {
+      background: var(--surface2);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-toolbar span { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+    .code-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10.5px;
+      color: #7ec8a0;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    .placeholder-msg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 1rem;
+    }
+    .placeholder-msg .big { font-size: 2.5rem; }
+
+    .gen-bar {
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .gen-full-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent) 0%, #005bbb 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      letter-spacing: 0.5px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .gen-full-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .gen-full-btn:active { transform: scale(0.98); }
+    .gen-full-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--accent2);
+      color: #0f1923;
+      padding: 10px 22px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 13px;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--danger); color: #fff; }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 25, 35, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 15px;
+      z-index: 9998;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--text); font-size: 14px; }
+
+    .toggle-mode {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1rem;
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 3px;
+      border: 1px solid var(--border);
+    }
+    .toggle-mode button {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .toggle-mode button.active {
+      background: var(--surface2);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .manual-input {
+      display: none;
+      margin-bottom: 1.5rem;
+    }
+    .manual-input textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+    .manual-input textarea:focus { outline: none; border-color: var(--accent); }
+    .manual-input .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    @media (max-width: 768px) {
+      .main { grid-template-columns: 1fr; }
+      .right-panel { position: relative; top: 0; height: auto; }
+      .config-grid { grid-template-columns: 1fr; }
+      .words-header { display: none; }
+      .word-row { grid-template-columns: 36px 1fr 1fr 80px 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">🎮 jogo<span>.gen</span> <span style="color:var(--accent)">OCR + IMAGENS</span></div>
+  <div class="topbar-actions">
+    <button class="btn-ghost" onclick="clearAll()">Limpar tudo</button>
+    <button class="btn-primary" onclick="generate()">⚡ Gerar script</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="left-panel">
+
+    <div class="section-title">Configuração</div>
+    <div class="config-grid">
+      <div class="field">
+        <label>Título do jogo</label>
+        <input type="text" id="gameTitle" value="VERBOS NÉERLANDESES" placeholder="Ex: Verbos Neerlandeses">
+      </div>
+      <div class="field">
+        <label>Link botão voltar</label>
+        <input type="text" id="backLink" value="index.html" placeholder="index.html">
+      </div>
+      <div class="field">
+        <label>Cor de fundo</label>
+        <input type="text" id="bgColor" value="#1a252f" placeholder="#1a252f">
+      </div>
+      <div class="field">
+        <label>Cor de destaque</label>
+        <input type="text" id="accentColor" value="#3498db" placeholder="#3498db">
+      </div>
+    </div>
+
+    <div class="section-title">Entrada de Palavras</div>
+    
+    <div class="toggle-mode">
+      <button class="active" onclick="setMode('image')" id="btnImage">📷 Upload de Imagem (OCR)</button>
+      <button onclick="setMode('manual')" id="btnManual">⌨️ Texto Manual</button>
+    </div>
+
+    <div id="imageMode">
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📸</div>
+        <p><strong>Clique ou arraste uma imagem aqui</strong></p>
+        <p style="margin-top:4px;font-size:11px">O OCR vai extrair o texto automaticamente</p>
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)">
+      </div>
+
+      <div class="ocr-preview" id="ocrPreview">
+        <img id="previewImg" src="" alt="preview">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--muted)">Texto detectado:</span>
+          <button class="btn-ghost" style="padding:4px 10px;font-size:11px" onclick="processOCRText()">✨ Processar em pares</button>
+        </div>
+        <div class="ocr-text" id="ocrText"></div>
+      </div>
+    </div>
+
+    <div class="manual-input" id="manualMode">
+      <textarea id="manualText" placeholder="zijn - ser / estar&#10;hebben - ter&#10;gaan - ir&#10;willen - querer&#10;kunnen - poder (capacidade)&#10;mogen - poder (permissão)&#10;moeten - dever / precisar&#10;zullen - futuro / condicional&#10;worden - se tornar"></textarea>
+      <div class="hint">Formato: <strong>palavraNL - traduçãoPT</strong> (um por linha, separado por traço)</div>
+      <button class="btn-primary" style="margin-top:10px;width:100%" onclick="processManualText()">✨ Processar texto</button>
+    </div>
+
+    <div class="section-title" style="margin-top:1.5rem;margin-bottom:8px">Pares de palavras</div>
+
+    <div class="words-header">
+      <span>#</span>
+      <span>Palavra NL</span>
+      <span>Tradução PT</span>
+      <span>Imagem</span>
+      <span></span>
+    </div>
+
+    <div id="wordList"></div>
+
+    <button class="add-word-btn" onclick="addWord()">
+      ＋ Adicionar par
+    </button>
+
+  </div>
+
+  <div class="right-panel">
+
+    <div class="preview-panel">
+      <div class="section-title">Pré-visualização</div>
+      <div class="preview-strip" id="previewStrip">
+        <div style="color:var(--muted);font-size:12px;padding-top:8px">Preencha os pares para ver a prévia...</div>
+      </div>
+    </div>
+
+    <div class="output-panel">
+      <div class="output-header">
+        <div class="section-title" style="margin-bottom:0">Script gerado</div>
+        <button class="btn-success" id="copyBtn" onclick="copyCode()" style="display:none">📋 Copiar</button>
+      </div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span id="fileLabel">aguardando geração...</span>
+          <span id="lineCount"></span>
+        </div>
+        <div class="code-body" id="codeBody">
+          <div class="placeholder-msg">
+            <div class="big">⚡</div>
+            <div>Faça upload de uma imagem ou digite as palavras<br><strong>e clique em Gerar script</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gen-bar">
+      <button class="gen-full-btn" id="genBtn" onclick="generate()">
+        ⚡ GERAR SCRIPT HTML COMPLETO
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Processando...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let words = [];
+let generatedCode = '';
+let currentMode = 'image';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btnImage').classList.toggle('active', mode === 'image');
+  document.getElementById('btnManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('imageMode').style.display = mode === 'image' ? 'block' : 'none';
+  document.getElementById('manualMode').style.display = mode === 'manual' ? 'block' : 'none';
+}
+
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile({ target: { files: e.dataTransfer.files } });
+});
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  showLoading('Lendo imagem...');
+  
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const img = document.getElementById('previewImg');
+    img.src = evt.target.result;
+    document.getElementById('ocrPreview').style.display = 'block';
+    
+    hideLoading();
+    showLoading('Extraindo texto com OCR...');
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+    script.onload = () => {
+      Tesseract.recognize(evt.target.result, 'eng+nld', {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            document.getElementById('loadingText').textContent = `OCR: ${Math.round(m.progress * 100)}%`;
+          }
+        }
+      }).then(({ data: { text } }) => {
+        hideLoading();
+        document.getElementById('ocrText').textContent = text;
+        showToast('✅ Texto extraído! Clique em "Processar em pares"');
+      }).catch(err => {
+        hideLoading();
+        showToast('❌ Erro no OCR: ' + err.message, true);
+      });
+    };
+    document.head.appendChild(script);
+  };
+  reader.readAsDataURL(file);
+}
+
+function processOCRText() {
+  const text = document.getElementById('ocrText').textContent;
+  processText(text);
+}
+
+function processManualText() {
+  const text = document.getElementById('manualText').value;
+  processText(text);
+}
+
+function processText(text) {
+  if (!text.trim()) {
+    showToast('⚠️ Nenhum texto para processar!', true);
+    return;
+  }
+  
+  showLoading('Processando pares de palavras...');
+  
+  const lines = text.split('\n').filter(l => l.trim());
+  const newWords = [];
+  
+  for (const line of lines) {
+    let parts = line.split(/\s*[-—→:=]\s+/);
+    if (parts.length < 2) {
+      parts = line.split(/\s{2,}/);
+    }
+    if (parts.length >= 2) {
+      const nl = parts[0].trim();
+      const pt = parts.slice(1).join(' - ').trim();
+      if (nl && pt) {
+        newWords.push({ nl, pt, img: '', emoji: getEmojiForWord(nl, pt) });
+      }
+    }
+  }
+  
+  if (newWords.length === 0) {
+    hideLoading();
+    showToast('⚠️ Nenhum par encontrado. Use formato: palavra - tradução', true);
+    return;
+  }
+  
+  words = newWords;
+  renderWords();
+  hideLoading();
+  showToast(`✅ ${words.length} pares encontrados! Buscando imagens...`);
+  
+  searchAllImages();
+}
+
+function getEmojiForWord(nl, pt) {
+  const map = {
+    'zijn': '🔵', 'hebben': '🤲', 'gaan': '🚶', 'willen': '💭',
+    'kunnen': '💪', 'mogen': '✅', 'moeten': '⚠️', 'zullen': '🔮',
+    'worden': '🦋', 'zich voelen': '⚖️', 'gelijk': '⚖️', 'ongelijk': '🚫',
+    'vriendelijk': '🤝', 'onvriendelijk': '😠', 'handig': '🔧', 'onhandig': '🌪️'
+  };
+  return map[nl.toLowerCase()] || map[pt.toLowerCase()] || '❓';
+}
+
+async function searchAllImages() {
+  showLoading('Buscando imagens na internet...');
+  
+  for (let i = 0; i < words.length; i++) {
+    document.getElementById('loadingText').textContent = `Buscando imagem ${i+1}/${words.length}: "${words[i].pt}"`;
+    
+    try {
+      const imgUrl = await searchImage(words[i].pt);
+      words[i].img = imgUrl;
+      updateWordImage(i, imgUrl);
+    } catch (e) {
+      // Keep emoji as fallback
+    }
+    
+    await new Promise(r => setTimeout(r, 300));
+  }
+  
+  hideLoading();
+  showToast('✅ Imagens carregadas! Pronto para gerar o script.');
+  updatePreview();
+}
+
+async function searchImage(query) {
+  return `https://source.unsplash.com/featured/300x200/?${encodeURIComponent(query)}`;
+}
+
+function renderWords() {
+  const list = document.getElementById('wordList');
+  list.innerHTML = '';
+  words.forEach((w, i) => {
+    const row = document.createElement('div');
+    row.className = 'word-row';
+    row.id = `wordRow-${i}`;
+    row.innerHTML = `
+      <div class="word-num">${String(i+1).padStart(2,'0')}</div>
+      <input type="text" placeholder="palavra NL" value="${escHtml(w.nl)}" oninput="words[${i}].nl=this.value;updatePreview()">
+      <input type="text" placeholder="tradução PT" value="${escHtml(w.pt)}" oninput="words[${i}].pt=this.value;updatePreview()">
+      <img class="word-img ${w.img ? '' : 'loading'}" id="wordImg-${i}" src="${w.img || ''}" alt="" onerror="this.src='';this.classList.add('loading');this.style.display='none';this.nextElementSibling.style.display='flex'" style="${w.img ? '' : 'display:none'}">
+      <div class="word-num" id="wordEmoji-${i}" style="${w.img ? 'display:none' : ''}">${w.emoji || '❓'}</div>
+      <button class="del-btn" onclick="removeWord(${i})" title="Remover">✕</button>
+    `;
+    list.appendChild(row);
+  });
+  updatePreview();
+}
+
+function updateWordImage(idx, url) {
+  const img = document.getElementById(`wordImg-${idx}`);
+  const emoji = document.getElementById(`wordEmoji-${idx}`);
+  if (img) {
+    img.src = url;
+    img.classList.remove('loading');
+    img.style.display = 'block';
+  }
+  if (emoji) emoji.style.display = 'none';
+}
+
+function escHtml(s) { return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function addWord() {
+  words.push({ nl: '', pt: '', img: '', emoji: '❓' });
+  renderWords();
+  setTimeout(() => {
+    const rows = document.querySelectorAll('.word-row');
+    rows[rows.length-1].querySelector('input').focus();
+  }, 50);
+}
+
+function removeWord(i) {
+  if (words.length <= 1) return;
+  words.splice(i, 1);
+  renderWords();
+}
+
+function updatePreview() {
+  const strip = document.getElementById('previewStrip');
+  const valid = words.filter(w => w.nl || w.pt);
+  if (!valid.length) {
+    strip.innerHTML = '<div style="color:var(--muted);font-size:12px;padding-top:8px">Preencha os pares para ver a prévia...</div>';
+    return;
+  }
+  strip.innerHTML = valid.map(w => `
+    <div class="prev-card">
+      <span class="em">${w.img ? '🖼️' : (w.emoji || '❓')}</span>
+      <span>${(w.pt || '...').substring(0,8)}</span>
+    </div>
+    <div class="prev-card txt-card">
+      <span>${(w.nl || '...').substring(0,8)}</span>
+    </div>
+  `).join('');
+}
+
+function generate() {
+  const title = document.getElementById('gameTitle').value || 'JOGO DE PALAVRAS';
+  const backLink = document.getElementById('backLink').value || 'index.html';
+  const bgColor = document.getElementById('bgColor').value || '#1a252f';
+  const accentColor = document.getElementById('accentColor').value || '#3498db';
+  const valid = words.filter(w => w.nl && w.pt);
+
+  if (valid.length < 2) {
+    showToast('⚠️ Adicione pelo menos 2 pares completos!', true);
+    return;
+  }
+
+  const total = valid.length;
+  const batchSize = Math.min(5, total);
+  
+  const dataJS = valid.map(p => {
+    const art = p.img ? p.img : (p.emoji || '❓');
+    const isImg = p.img && p.img.startsWith('http');
+    return `  {nl:${JSON.stringify(p.nl)}, pt:${JSON.stringify(p.pt)}, art:${JSON.stringify(art)}, isImg:${isImg}}`;
+  }).join(',\n');
+
+  generatedCode = `<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>${title}</title>
+  <style>
+    :root {
+      --bg: ${bgColor}; --surface: #2c3e50; --accent: ${accentColor};
+      --correct: #27ae60; --wrong: #c0392b; --text: #ecf0f1;
+    }
+    * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; padding: 0; background: var(--bg); }
+    body { font-family: 'Segoe UI', sans-serif; color: var(--text); display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
+    header { background: var(--surface); height: 10vh; min-height: 50px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); flex-shrink: 0; }
+    header h1 { font-size: clamp(0.8rem, 4vw, 1.1rem); margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+    .header-actions { display: flex; align-items: center; gap: 15px; }
+    .voice-toggle { background: none; border: none; cursor: pointer; color: white; font-size: clamp(20px, 6vw, 28px); padding: 5px; display: flex; align-items: center; justify-content: center; }
+    .stats { height: 7vh; display: flex; gap: 20px; justify-content: center; align-items: center; font-weight: bold; flex-shrink: 0; background: rgba(0,0,0,0.1); }
+    .grid-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px; width: 100%; overflow: hidden; background: var(--bg); }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(${batchSize}, 1fr); gap: 10px; width: 100%; max-width: 450px; height: 100%; }
+    .card { background: var(--surface); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); text-align: center; transition: 0.1s; padding: 6px; overflow: hidden; }
+    .card:active { transform: scale(0.96); }
+    .card.selected { border: 3px solid var(--accent); background: #34495e; box-shadow: 0 0 10px rgba(52,152,219,0.3); }
+    .card.matched { visibility: hidden; pointer-events: none; }
+    .card-img { width: 100%; height: 60%; object-fit: cover; border-radius: 6px; margin-bottom: 4px; }
+    .visual { font-size: clamp(26px, 8vw, 36px); margin-bottom: 3px; }
+    .nl-text { font-weight: bold; font-size: clamp(0.75rem, 4vw, 1.05rem); text-transform: uppercase; color: #fff; }
+    .pt-sub { font-size: clamp(0.6rem, 3vw, 0.8rem); color: #bdc3c7; font-weight: bold; }
+    #celebration { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    #celebration h2 { font-size: clamp(1.2rem, 5vw, 2rem); margin-bottom: 10px; }
+    #celebration p { font-size: clamp(0.9rem, 3vw, 1.2rem); color: #bdc3c7; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>${title}</h1>
+  <div class="header-actions">
+    <button id="voiceBtn" class="voice-toggle" onclick="toggleAudio()">🎧</button>
+    <a href="${backLink}" style="text-decoration: none; color: white; font-size: 24px;">⬅️</a>
+  </div>
+</header>
+<div class="stats">
+  <span style="color:var(--correct)">✓ <span id="ok">0</span></span>
+  <span style="color:var(--wrong)">✗ <span id="err">0</span></span>
+  <span style="font-size: 0.8rem; color: #7f8c8d;">TOTAL: <span id="prog">0</span>/${total}</span>
+</div>
+<div class="grid-container">
+  <div class="grid" id="grid"></div>
+</div>
+<div id="celebration">
+  <h2>Concluído com Sucesso! 🎉</h2>
+  <p>Você revisou todas as ${total} palavras.</p>
+  <button style="margin-top:20px; padding:15px 30px; background:var(--accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:1rem;" onclick="location.reload()">RECOMEÇAR</button>
+</div>
+<script>
+const ALL_DATA = [
+${dataJS}
+];
+let audioEnabled = true, currentIdx = 0, batchSize = ${batchSize};
+let selected = [], ok = 0, err = 0, totalMatched = 0;
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  document.getElementById('voiceBtn').style.opacity = audioEnabled ? '1' : '0.3';
+}
+function speakNL(text) {
+  if (!audioEnabled) return;
+  window.speechSynthesis.cancel();
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = 'nl-NL';
+  window.speechSynthesis.speak(msg);
+}
+function loadBatch() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = ''; selected = [];
+  const batch = ALL_DATA.slice(currentIdx, currentIdx + batchSize);
+  let cards = [];
+  batch.forEach(w => { cards.push({...w, type:'art'}); cards.push({...w, type:'txt'}); });
+  cards.sort(() => Math.random() - 0.5);
+  cards.forEach(card => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    if (card.type === 'art') {
+      if (card.isImg) {
+        div.innerHTML = '<img class="card-img" src="' + card.art + '" alt="" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'block\\'">' +
+                       '<span class="visual" style="display:none">❓</span><span class="pt-sub">' + card.pt + '</span>';
+      } else {
+        div.innerHTML = '<span class="visual">' + card.art + '</span><span class="pt-sub">' + card.pt + '</span>';
+      }
+    } else {
+      div.innerHTML = '<span class="nl-text">' + card.nl + '</span>';
+    }
+    div.onclick = () => { if (card.type === 'txt') speakNL(card.nl); handleSelect(card, div, batch.length); };
+    grid.appendChild(div);
+  });
+}
+function handleSelect(card, el, batchLen) {
+  if (selected.length === 2 || el.classList.contains('selected')) return;
+  el.classList.add('selected'); selected.push({card, el});
+  if (selected.length === 2) {
+    const [a, b] = selected;
+    if (a.card.nl === b.card.nl && a.card.type !== b.card.type) {
+      ok++; totalMatched++;
+      document.getElementById('ok').textContent = ok;
+      document.getElementById('prog').textContent = totalMatched;
+      setTimeout(() => {
+        a.el.classList.add('matched'); b.el.classList.add('matched');
+        const m = document.querySelectorAll('.matched').length;
+        if (m === batchLen * 2) {
+          if (currentIdx + batchSize >= ALL_DATA.length) document.getElementById('celebration').style.display = 'flex';
+          else setTimeout(() => { currentIdx += batchSize; loadBatch(); }, 500);
+        }
+      }, 400); selected = [];
+    } else {
+      err++; document.getElementById('err').textContent = err;
+      setTimeout(() => { a.el.classList.remove('selected'); b.el.classList.remove('selected'); selected = []; }, 500);
+    }
+  }
+}
+loadBatch();
+<\/script>
+</body>
+</html>`;
+
+  const lines = generatedCode.split('\n').length;
+  document.getElementById('codeBody').textContent = generatedCode;
+  document.getElementById('fileLabel').textContent = `jogo-${title.toLowerCase().replace(/[^a-z0-9]/g,'-')}.html`;
+  document.getElementById('lineCount').textContent = `${lines} linhas`;
+  document.getElementById('copyBtn').style.display = 'flex';
+  showToast('✅ Script gerado com sucesso!');
+}
+
+function copyCode() {
+  if (!generatedCode) return;
+  navigator.clipboard.writeText(generatedCode).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 2000);
+    showToast('📋 Código copiado!');
+  });
+}
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').class
