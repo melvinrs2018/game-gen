@@ -762,7 +762,9 @@ async function searchAllImages() {
 }
 
 async function searchImage(query) {
-  return `https://source.unsplash.com/featured/300x200/?${encodeURIComponent(query)}`;
+  // Picsum Photos - sempre online, gratuito, sem API key
+  const seed = query.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
+  return `https://picsum.photos/seed/${seed}/300/200`;
 }
 
 function renderWords() {
@@ -996,4 +998,38 @@ function copyCode() {
 
 function showLoading(text) {
   document.getElementById('loadingText').textContent = text;
-  document.getElementById('loadingOverlay').class
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.getElementById('genBtn').disabled = true;
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+  document.getElementById('genBtn').disabled = false;
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  setTimeout(() => { t.classList.remove('show'); t.classList.remove('error'); }, 2500);
+}
+
+function clearAll() {
+  words = [];
+  generatedCode = '';
+  document.getElementById('ocrPreview').style.display = 'none';
+  document.getElementById('ocrText').textContent = '';
+  document.getElementById('manualText').value = '';
+  document.getElementById('codeBody').innerHTML = '<div class="placeholder-msg"><div class="big">⚡</div><div>Faça upload de uma imagem ou digite as palavras<br><strong>e clique em Gerar script</strong></div></div>';
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('fileLabel').textContent = 'aguardando geração...';
+  document.getElementById('lineCount').textContent = '';
+  renderWords();
+}
+
+words = [{nl:'', pt:'', img:'', emoji:'❓'}];
+renderWords();
+</script>
+</body>
+</html>
