@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Gerador de Jogo de Palavras - Busca Imagens</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gerador Jogo de Palavras</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -16,7 +16,6 @@
       --text: #e8edf5;
       --muted: #7a8fa6;
       --border: rgba(255,255,255,0.07);
-      --radius: 12px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
@@ -24,7 +23,6 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      min-height: 100dvh;
       overflow-x: hidden;
     }
     .topbar {
@@ -41,22 +39,16 @@
     }
     .topbar-logo {
       font-family: 'Space Mono', monospace;
-      font-size: clamp(0.7rem, 2.5vw, 0.85rem);
+      font-size: 0.8rem;
       color: var(--accent2);
       letter-spacing: 1px;
       text-transform: uppercase;
-      white-space: nowrap;
     }
-    .topbar-logo span { color: var(--muted); }
-    .topbar-actions { display: flex; gap: 8px; align-items: center; }
     .btn-ghost {
       padding: 6px 12px; border-radius: 8px;
-      border: 1px solid var(--border);
-      background: none; color: var(--muted);
-      font-size: 12px; cursor: pointer;
+      border: 1px solid var(--border); background: none;
+      color: var(--muted); font-size: 12px; cursor: pointer;
       font-family: 'DM Sans', sans-serif;
-      transition: all 0.15s;
-      white-space: nowrap;
     }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .btn-primary {
@@ -64,46 +56,23 @@
       border: none; background: var(--accent);
       color: #fff; font-size: 12px; font-weight: 700;
       cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: all 0.15s; letter-spacing: 0.3px;
-      white-space: nowrap;
     }
-    .btn-primary:hover { background: #2d8ae0; transform: translateY(-1px); }
-    .btn-primary:active { transform: scale(0.97); }
-    .btn-success {
-      padding: 7px 16px; border-radius: 8px;
-      border: none; background: var(--accent2);
-      color: #0f1923; font-size: 12px; font-weight: 700;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-    .btn-success:hover { opacity: 0.88; }
-    .btn-download {
-      padding: 14px; border-radius: 10px;
-      border: none; background: linear-gradient(135deg, var(--accent2) 0%, #00c853 100%);
-      color: #0f1923; font-size: 15px; font-weight: 700;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      letter-spacing: 0.5px;
-      transition: all 0.15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      touch-action: manipulation;
-    }
-    .btn-download:hover { opacity: 0.9; transform: translateY(-1px); }
     .main {
       display: grid;
-      grid-template-columns: 1fr 420px;
-      gap: 0;
+      grid-template-columns: 1fr 400px;
       min-height: calc(100vh - 56px);
-      min-height: calc(100dvh - 56px);
     }
     .left-panel {
       padding: 1.5rem;
       overflow-y: auto;
       border-right: 1px solid var(--border);
+    }
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 56px);
+      position: sticky;
+      top: 56px;
     }
     .section-title {
       font-family: 'Space Mono', monospace;
@@ -121,265 +90,649 @@
     }
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
-    .field input[type=text] {
-      padding: 9px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 14px;
-      font-family: 'DM Sans', sans-serif;
-      transition: border-color 0.15s;
+    .field input {
+      padding: 9px 12px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
       width: 100%;
     }
-    .field input[type=text]:focus { outline: none; border-color: var(--accent); }
+    .field input:focus { outline: none; border-color: var(--accent); }
     
     .upload-area {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 2rem 1rem;
-      text-align: center;
-      margin-bottom: 1rem;
-      transition: all 0.2s;
-      cursor: pointer;
-      background: var(--surface);
-      touch-action: manipulation;
+      border: 2px dashed var(--border); border-radius: 12px;
+      padding: 2rem 1rem; text-align: center; margin-bottom: 1rem;
+      cursor: pointer; background: var(--surface);
     }
-    .upload-area:hover, .upload-area.dragover {
-      border-color: var(--accent);
-      background: rgba(59, 158, 255, 0.05);
-    }
+    .upload-area:hover { border-color: var(--accent); }
     .upload-area .icon { font-size: 2.5rem; margin-bottom: 8px; }
     .upload-area p { color: var(--muted); font-size: 13px; }
-    .upload-area input[type=file] { display: none; }
+    .upload-area input { display: none; }
+    
+    .toggle-mode {
+      display: flex; gap: 0; margin-bottom: 1rem;
+      background: var(--surface); border-radius: 8px;
+      padding: 3px; border: 1px solid var(--border);
+    }
+    .toggle-mode button {
+      flex: 1; padding: 8px 10px; border: none; background: none;
+      color: var(--muted); font-size: 11px; cursor: pointer;
+      border-radius: 6px; font-family: 'DM Sans', sans-serif;
+    }
+    .toggle-mode button.active {
+      background: var(--surface2); color: var(--text); font-weight: 600;
+    }
+    
+    .manual-input { display: none; margin-bottom: 1.5rem; }
+    .manual-input textarea {
+      width: 100%; min-height: 180px; padding: 12px;
+      border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text);
+      font-family: 'Space Mono', monospace; font-size: 12px;
+      resize: vertical;
+    }
+    .manual-input .hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
     
     .ocr-preview {
-      background: var(--surface);
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      border: 1px solid var(--border);
-      display: none;
+      background: var(--surface); border-radius: 10px;
+      padding: 1rem; margin-bottom: 1.5rem;
+      border: 1px solid var(--border); display: none;
     }
-    .ocr-preview img {
-      max-width: 100%;
-      max-height: 200px;
-      border-radius: 8px;
-      display: block;
-      margin: 0 auto 10px;
-    }
+    .ocr-preview img { max-width: 100%; max-height: 180px; border-radius: 8px; display: block; margin: 0 auto 10px; }
     .ocr-text {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      white-space: pre-wrap;
-      max-height: 150px;
-      overflow-y: auto;
-      background: #0a1118;
-      padding: 10px;
-      border-radius: 6px;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--muted); white-space: pre-wrap;
+      max-height: 120px; overflow-y: auto;
+      background: #0a1118; padding: 10px; border-radius: 6px;
     }
     
-    /* Word rows com imagens separadas NL/PT */
+    /* WORD ROWS */
     .words-header {
       display: grid;
-      grid-template-columns: 40px 1fr 1fr 90px 90px 32px;
-      gap: 8px;
-      padding: 0 4px;
-      margin-bottom: 8px;
+      grid-template-columns: 36px 1fr 1fr 90px 90px 32px;
+      gap: 6px; padding: 0 4px; margin-bottom: 8px;
     }
     .words-header span {
-      font-size: 10px;
-      color: var(--muted);
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 9px; color: var(--muted);
+      text-align: center; text-transform: uppercase;
     }
     .word-row {
       display: grid;
-      grid-template-columns: 40px 1fr 1fr 90px 90px 32px;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 10px;
-      animation: slideIn 0.2s ease;
+      grid-template-columns: 36px 1fr 1fr 90px 90px 32px;
+      gap: 6px; align-items: center;
+      margin-bottom: 8px; padding: 6px;
       background: rgba(255,255,255,0.02);
-      padding: 8px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
+      border-radius: 8px; border: 1px solid var(--border);
     }
-    @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
     .word-num {
-      width: 40px; height: 36px;
-      background: var(--surface2);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 32px; background: var(--surface2);
+      border-radius: 6px; display: flex;
+      align-items: center; justify-content: center;
       font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      flex-shrink: 0;
+      font-size: 10px; color: var(--muted);
     }
-    .word-row input[type=text] {
-      height: 36px;
-      padding: 0 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
+    .word-row input {
+      height: 32px; padding: 0 8px;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text);
+      font-size: 12px; font-family: 'DM Sans', sans-serif;
       width: 100%;
-      transition: border-color 0.15s;
     }
-    .word-row input[type=text]:focus { outline: none; border-color: var(--accent); }
+    .word-row input:focus { outline: none; border-color: var(--accent); }
     
     .img-slot {
-      width: 90px;
-      height: 65px;
-      border-radius: 8px;
-      border: 2px dashed var(--border);
+      width: 90px; height: 55px;
+      border-radius: 6px; border: 2px dashed var(--border);
       background: var(--surface2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; overflow: hidden;
+      font-size: 11px; color: var(--muted);
       transition: all 0.15s;
-      font-size: 18px;
     }
-    .img-slot:hover { border-color: var(--accent); }
+    .img-slot:hover { border-color: var(--accent); color: var(--accent); }
     .img-slot.has-img {
-      border-style: solid;
-      border-color: var(--accent2);
+      border-style: solid; border-color: var(--accent2);
     }
     .img-slot img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      width: 100%; height: 100%; object-fit: cover;
     }
-    .img-slot .remove-img {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--danger);
-      color: white;
-      border: none;
-      font-size: 10px;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
+    .img-slot .remove {
+      position: absolute; top: 2px; right: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--danger); color: white;
+      border: none; font-size: 10px; cursor: pointer;
+      display: none; align-items: center; justify-content: center;
     }
-    .img-slot.has-img:hover .remove-img { display: flex; }
+    .img-slot.has-img:hover .remove { display: flex; }
     .img-slot .label {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      font-size: 9px;
-      text-align: center;
-      padding: 1px;
-    }
-    .img-slot .loading {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--surface2);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.6); color: white;
+      font-size: 8px; text-align: center; padding: 1px;
     }
     
     .del-btn {
-      width: 32px; height: 32px;
-      border-radius: 6px;
-      border: none;
-      background: none;
-      color: var(--muted);
-      font-size: 15px;
-      cursor: pointer;
+      width: 28px; height: 28px; border-radius: 6px;
+      border: none; background: none; color: var(--muted);
+      font-size: 14px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-      flex-shrink: 0;
     }
-    .del-btn:hover { color: var(--danger); background: rgba(255,71,87,0.1); }
+    .del-btn:hover { color: var(--danger); }
     .add-word-btn {
       display: flex; align-items: center; gap: 8px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px dashed var(--border);
-      background: none;
-      color: var(--muted);
-      font-size: 13px;
-      cursor: pointer;
-      width: 100%;
-      justify-content: center;
-      margin-top: 4px;
+      padding: 10px; border-radius: 8px;
+      border: 1px dashed var(--border); background: none;
+      color: var(--muted); font-size: 13px; cursor: pointer;
+      width: 100%; justify-content: center; margin-top: 4px;
       font-family: 'DM Sans', sans-serif;
-      transition: all 0.15s;
-      touch-action: manipulation;
     }
     .add-word-btn:hover { border-color: var(--accent2); color: var(--accent2); }
     
-    .right-panel {
-      display: flex;
-      flex-direction: column;
-      height: calc(100vh - 56px);
-      height: calc(100dvh - 56px);
-      position: sticky;
-      top: 56px;
-    }
+    /* RIGHT PANEL */
     .preview-panel {
-      padding: 1.5rem;
-      border-bottom: 1px solid var(--border);
+      padding: 1.5rem; border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .preview-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-      min-height: 50px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-top: 10px; min-height: 50px;
     }
     .prev-card {
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 6px 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      font-size: 11px;
-      color: var(--muted);
+      background: var(--surface2); border-radius: 8px;
+      padding: 6px 10px; display: flex;
+      flex-direction: column; align-items: center;
+      gap: 2px; font-size: 11px; color: var(--muted);
       min-width: 56px;
     }
+    .prev-card img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
     .prev-card .em { font-size: 18px; }
-    .prev-card img {
-      width: 40px;
-      height: 40px;
-      object-fit: cover;
-      border-radius: 4px;
-    }
     .prev-card.txt-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: var(--surface); border: 1px solid var(--border);
       font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      color: var(--text);
-      text-transform: uppercase;
+      font-size: 10px; color: var(--text); text-transform: uppercase;
     }
+    
     .output-panel {
-      flex: 1;
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      flex: 1; padding: 1.5rem;
+      display: flex; flex-direction: column; overflow: hidden;
     }
     .output-header {
-      display: flex;
-     
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 10px;
+    }
+    .code-wrap {
+      flex: 1; background: #0a1118;
+      border-radius: 10px; border: 1px solid var(--border);
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .code-toolbar {
+      background: var(--surface2); padding: 8px 12px;
+      display: flex; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-toolbar span {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; color: var(--muted);
+    }
+    .code-body {
+      flex: 1; overflow-y: auto; padding: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; color: #7ec8a0;
+      white-space: pre; line-height: 1.6;
+    }
+    .placeholder-msg {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; gap: 8px; color: var(--muted);
+      font-size: 13px; text-align: center; padding: 1rem;
+    }
+    .placeholder-msg .big { font-size: 2.5rem; }
+    
+    .gen-bar {
+      padding: 1rem; border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .gen-full-btn {
+      width: 100%; padding: 14px; border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent) 0%, #005bbb 100%);
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px;
+    }
+    .gen-full-btn:hover { opacity: 0.9; }
+    .gen-full-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-download {
+      width: 100%; padding: 14px; border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent2) 0%, #00c853 100%);
+      color: #0f1923; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px;
+    }
+    .btn-download:hover { opacity: 0.9; }
+    
+    /* LOADING & TOAST */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15,25,35,0.9);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 15px; z-index: 9998;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--text); font-size: 14px; }
+    
+    .toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--accent2); color: #0f1923;
+      padding: 10px 22px; border-radius: 20px;
+      font-weight: 700; font-size: 13px; opacity: 0;
+      transition: all 0.3s; pointer-events: none; z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--danger); color: #fff; }
+    
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .main { grid-template-columns: 1fr; }
+      .right-panel { position: relative; top: 0; height: auto; }
+      .config-grid { grid-template-columns: 1fr; }
+      .words-header { display: none; }
+      .word-row {
+        grid-template-columns: 28px 1fr 1fr 1fr 1fr 26px;
+        gap: 4px; padding: 4px;
+      }
+      .word-num { width: 28px; height: 28px; font-size: 9px; }
+      .img-slot { width: 100%; height: 45px; }
+      .word-row input { height: 28px; font-size: 11px; }
+      .left-panel { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">🎮 jogo.gen <span style="color:var(--accent)">IMG WEB</span></div>
+  <div class="topbar-actions">
+    <button class="btn-ghost" onclick="clearAll()">Limpar</button>
+    <button class="btn-primary" onclick="generate()">⚡ Gerar</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="left-panel">
+    <div class="section-title">Configuração</div>
+    <div class="config-grid">
+      <div class="field">
+        <label>Título</label>
+        <input type="text" id="gameTitle" value="VERBOS NÉERLANDESES">
+      </div>
+      <div class="field">
+        <label>Link voltar</label>
+        <input type="text" id="backLink" value="index.html">
+      </div>
+      <div class="field">
+        <label>Cor fundo</label>
+        <input type="text" id="bgColor" value="#1a252f">
+      </div>
+      <div class="field">
+        <label>Cor destaque</label>
+        <input type="text" id="accentColor" value="#3498db">
+      </div>
+    </div>
+
+    <div class="section-title">Entrada</div>
+    <div class="toggle-mode">
+      <button class="active" onclick="setMode('image')" id="btnImage">📷 OCR Imagem</button>
+      <button onclick="setMode('manual')" id="btnManual">⌨️ Texto</button>
+    </div>
+
+    <div id="imageMode">
+      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📸</div>
+        <p><strong>Clique ou arraste uma imagem</strong></p>
+        <p style="font-size:11px;color:var(--muted)">OCR extrai o texto automaticamente</p>
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event);this.value=''">
+      </div>
+      <div class="ocr-preview" id="ocrPreview">
+        <img id="previewImg" src="" alt="">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--muted)">Texto detectado:</span>
+          <button class="btn-ghost" style="padding:4px 10px;font-size:11px" onclick="processOCRText()">✨ Processar</button>
+        </div>
+        <div class="ocr-text" id="ocrText"></div>
+      </div>
+    </div>
+
+    <div class="manual-input" id="manualMode">
+      <textarea id="manualText" placeholder="zijn - ser / estar&#10;hebben - ter&#10;gaan - ir"></textarea>
+      <div class="hint">Formato: <strong>palavraNL - traduçãoPT</strong> (um por linha)</div>
+      <button class="btn-primary" style="margin-top:10px;width:100%" onclick="processManualText()">✨ Processar</button>
+    </div>
+
+    <div class="section-title" style="margin-top:1.5rem">Pares <span id="pairCount" style="color:var(--accent2);margin-left:8px"></span></div>
+    
+    <div class="words-header">
+      <span>#</span><span>NL</span><span>PT</span><span>Img NL</span><span>Img PT</span><span></span>
+    </div>
+    <div id="wordList"></div>
+    <button class="add-word-btn" onclick="addWord()">＋ Adicionar par</button>
+  </div>
+
+  <div class="right-panel">
+    <div class="preview-panel">
+      <div class="section-title">Pré-visualização</div>
+      <div class="preview-strip" id="previewStrip">
+        <div style="color:var(--muted);font-size:12px">Preencha os pares para ver...</div>
+      </div>
+    </div>
+    <div class="output-panel">
+      <div class="output-header">
+        <div class="section-title" style="margin-bottom:0">Script</div>
+        <button class="btn-ghost" id="copyBtn" onclick="copyCode()" style="display:none">📋 Copiar</button>
+      </div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span id="fileLabel">aguardando...</span>
+          <span id="lineCount"></span>
+        </div>
+        <div class="code-body" id="codeBody">
+          <div class="placeholder-msg">
+            <div class="big">⚡</div>
+            <div>Processe as palavras e clique em Gerar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gen-bar">
+      <button class="gen-full-btn" id="genBtn" onclick="generate()">⚡ GERAR HTML</button>
+      <button class="btn-download" id="downloadBtn" onclick="downloadHTML()" style="display:none">⬇️ BAIXAR HTML</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Processando...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== ESTADO =====
+let words = [];
+let generatedCode = '';
+let currentMode = 'image';
+let tesseractLoaded = false;
+
+// ===== MODO =====
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btnImage').classList.toggle('active', mode === 'image');
+  document.getElementById('btnManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('imageMode').style.display = mode === 'image' ? 'block' : 'none';
+  document.getElementById('manualMode').style.display = mode === 'manual' ? 'block' : 'none';
+}
+
+// ===== UPLOAD OCR =====
+document.getElementById('uploadArea').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--accent)'; });
+document.getElementById('uploadArea').addEventListener('dragleave', e => { e.currentTarget.style.borderColor = ''; });
+document.getElementById('uploadArea').addEventListener('drop', e => {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = '';
+  if (e.dataTransfer.files.length) handleFile({ target: { files: e.dataTransfer.files } });
+});
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  showLoading('Lendo imagem...');
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    document.getElementById('previewImg').src = evt.target.result;
+    document.getElementById('ocrPreview').style.display = 'block';
+    if (!tesseractLoaded) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+      script.onload = () => { tesseractLoaded = true; runOCR(evt.target.result); };
+      script.onerror = () => { hideLoading(); showToast('❌ Erro OCR', true); };
+      document.head.appendChild(script);
+    } else {
+      runOCR(evt.target.result);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function runOCR(imageData) {
+  showLoading('OCR em andamento...');
+  Tesseract.recognize(imageData, 'eng+nld', {
+    logger: m => { if (m.status === 'recognizing text') document.getElementById('loadingText').textContent = 'OCR: ' + Math.round(m.progress * 100) + '%'; }
+  }).then(({ data: { text } }) => {
+    hideLoading();
+    document.getElementById('ocrText').textContent = text;
+    processText(text);
+  }).catch(err => { hideLoading(); showToast('❌ OCR falhou', true); });
+}
+
+function processOCRText() { processText(document.getElementById('ocrText').textContent); }
+function processManualText() { processText(document.getElementById('manualText').value); }
+
+// ===== PROCESSAR TEXTO =====
+function processText(text) {
+  if (!text || !text.trim()) { showToast('⚠️ Texto vazio', true); return; }
+  showLoading('Processando pares...');
+  setTimeout(() => {
+    const lines = text.split('\n').filter(l => l.trim());
+    const newWords = [];
+    for (const line of lines) {
+      const clean = line.replace(/^[-•·]\s*/, '').trim();
+      if (!clean) continue;
+      let parts = clean.split(/\s*[-—→:=]\s+/);
+      if (parts.length < 2) parts = clean.split(/\s{2,}/);
+      if (parts.length < 2) {
+        const m = clean.match(/^([a-zA-Z\s]+?)(\s+)([a-zA-Z\s].+)$/);
+        if (m) parts = [m[1].trim(), m[3].trim()];
+      }
+      if (parts.length >= 2) {
+        const nl = parts[0].trim(), pt = parts.slice(1).join(' ').trim();
+        if (nl.length > 1 && pt.length > 1) newWords.push({ nl, pt, imgNL: '', imgPT: '', emoji: getEmoji(nl, pt) });
+      }
+    }
+    if (newWords.length === 0) { hideLoading(); showToast('⚠️ Nenhum par encontrado', true); return; }
+    words = newWords;
+    renderWords();
+    updatePairCount();
+    hideLoading();
+    showToast('✅ ' + words.length + ' pares! Clique nos slots para buscar imagens.');
+  }, 100);
+}
+
+function getEmoji(nl, pt) {
+  const map = { 'zijn':'🔵','hebben':'🤲','gaan':'🚶','willen':'💭','kunnen':'💪','mogen':'✅','moeten':'⚠️','zullen':'🔮','worden':'🦋' };
+  return map[nl.toLowerCase()] || map[pt.toLowerCase()] || '❓';
+}
+
+function updatePairCount() {
+  const c = words.filter(w => w.nl && w.pt).length;
+  document.getElementById('pairCount').textContent = c ? '(' + c + ' pares)' : '';
+}
+
+// ===== RENDER WORDS =====
+function renderWords() {
+  const list = document.getElementById('wordList');
+  list.innerHTML = '';
+  if (!words.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Nenhum par. Use OCR ou modo manual.</div>';
+    updatePreview(); return;
+  }
+  words.forEach((w, i) => {
+    const row = document.createElement('div');
+    row.className = 'word-row';
+    row.innerHTML = 
+      '<div class="word-num">' + String(i+1).padStart(2,'0') + '</div>' +
+      '<input type="text" placeholder="NL" value="' + esc(w.nl) + '" oninput="words['+i+'].nl=this.value;updatePreview();updatePairCount();">' +
+      '<input type="text" placeholder="PT" value="' + esc(w.pt) + '" oninput="words['+i+'].pt=this.value;updatePreview();updatePairCount();">' +
+      renderImgSlot(i, 'nl', w.imgNL) +
+      renderImgSlot(i, 'pt', w.imgPT) +
+      '<button class="del-btn" onclick="removeWord('+i+')">✕</button>';
+    list.appendChild(row);
+  });
+  updatePreview();
+  updatePairCount();
+}
+
+function renderImgSlot(idx, type, img) {
+  if (img) {
+    return '<div class="img-slot has-img" onclick="searchImg('+idx+',\''+type+'\')">' +
+           '<img src="' + img + '" alt="" onerror="this.style.display=\'none\';this.parentElement.classList.remove(\'has-img\');this.parentElement.innerHTML=\'<span>🔍</span><div class=\\\'label\\\'>BUSCAR '+type.toUpperCase()+'</div>\'">' +
+           '<button class="remove" onclick="event.stopPropagation();clearImg('+idx+',\''+type+'\')">×</button></div>';
+  }
+  return '<div class="img-slot" onclick="searchImg('+idx+',\''+type+'\')"><span>🔍</span><div class="label">BUSCAR '+type.toUpperCase()+'</div></div>';
+}
+
+function esc(s) { return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ===== BUSCAR IMAGEM (CLIQUE) =====
+function searchImg(idx, type) {
+  const word = words[idx][type === 'nl' ? 'nl' : 'pt'];
+  if (!word) { showToast('⚠️ Preencha a palavra primeiro', true); return; }
+  showLoading('Buscando imagem...');
+  setTimeout(() => {
+    // Usa Lorem Picsum com seed baseada na palavra
+    const seed = word.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,15) + type;
+    const url = 'https://picsum.photos/seed/' + seed + '/300/200';
+    if (type === 'nl') words[idx].imgNL = url; else words[idx].imgPT = url;
+    renderWords();
+    hideLoading();
+    showToast('✅ Imagem ' + type.toUpperCase() + ' carregada!');
+  }, 300);
+}
+
+function clearImg(idx, type) {
+  if (type === 'nl') words[idx].imgNL = ''; else words[idx].imgPT = '';
+  renderWords();
+}
+
+function addWord() {
+  words.push({ nl:'', pt:'', imgNL:'', imgPT:'', emoji:'❓' });
+  renderWords();
+  setTimeout(() => { const rows = document.querySelectorAll('.word-row'); if (rows.length) rows[rows.length-1].querySelector('input').focus(); }, 50);
+}
+
+function removeWord(i) {
+  if (words.length <= 1) words = [{nl:'',pt:'',imgNL:'',imgPT:'',emoji:'❓'}];
+  else words.splice(i, 1);
+  renderWords();
+}
+
+function updatePreview() {
+  const strip = document.getElementById('previewStrip');
+  const valid = words.filter(w => w.nl || w.pt);
+  if (!valid.length) { strip.innerHTML = '<div style="color:var(--muted);font-size:12px">Preencha os pares...</div>'; return; }
+  strip.innerHTML = valid.map(w => 
+    '<div class="prev-card">' + (w.imgPT ? '<img src="'+w.imgPT+'" onerror="this.style.display=\'none\'">' : '<span class="em">'+(w.emoji||'❓')+'</span>') + '<span>'+(w.pt||'...').substring(0,8)+'</span></div>' +
+    '<div class="prev-card txt-card"><span>'+(w.nl||'...').substring(0,8)+'</span></div>'
+  ).join('');
+}
+
+// ===== GERAR =====
+function generate() {
+  const title = document.getElementById('gameTitle').value || 'JOGO';
+  const backLink = document.getElementById('backLink').value || 'index.html';
+  const bgColor = document.getElementById('bgColor').value || '#1a252f';
+  const accentColor = document.getElementById('accentColor').value || '#3498db';
+  const valid = words.filter(w => w.nl && w.pt);
+  if (valid.length < 2) { showToast('⚠️ Mínimo 2 pares', true); return; }
+
+  const total = valid.length;
+  const batchSize = Math.min(5, total);
+  
+  const dataJS = valid.map(p => {
+    const art = p.imgPT || p.imgNL || (p.emoji || '❓');
+    const isImg = !!(p.imgPT || p.imgNL);
+    return '  {nl:' + JSON.stringify(p.nl) + ', pt:' + JSON.stringify(p.pt) + ', art:' + JSON.stringify(art) + ', isImg:' + isImg + '}';
+  }).join(',\n');
+
+  generatedCode = '<!DOCTYPE html>\n<html lang="pt">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>' + title + '</title>\n<style>\n:root{--bg:'+bgColor+';--surface:#2c3e50;--accent:'+accentColor+';--correct:#27ae60;--wrong:#c0392b;--text:#ecf0f1;}\n*{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}\nhtml,body{height:100%;margin:0;padding:0;background:var(--bg);}\nbody{font-family:Segoe UI,system-ui,sans-serif;color:var(--text);display:flex;flex-direction:column;height:100vh;height:100dvh;width:100vw;overflow:hidden;}\nheader{background:var(--surface);height:10vh;min-height:50px;padding:0 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--accent);flex-shrink:0;}\nheader h1{font-size:clamp(0.8rem,4vw,1.1rem);margin:0;text-transform:uppercase;letter-spacing:1px;}\n.header-actions{display:flex;align-items:center;gap:15px;}\n.voice-toggle{background:none;border:none;cursor:pointer;color:white;font-size:clamp(20px,6vw,28px);padding:5px;display:flex;align-items:center;justify-content:center;}\n.stats{height:7vh;min-height:36px;display:flex;gap:clamp(10px,3vw,20px);justify-content:center;align-items:center;font-weight:bold;flex-shrink:0;background:rgba(0,0,0,0.1);font-size:clamp(0.75rem,3vw,0.95rem);white-space:nowrap;padding:0 10px;}\n.grid-container{flex:1;display:flex;align-items:center;justify-content:center;padding:clamp(4px,2vw,12px);width:100%;overflow:hidden;background:var(--bg);min-height:0;}\n.grid{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat('+batchSize+',1fr);gap:clamp(6px,2vw,12px);width:100%;max-width:min(95vw,500px);height:100%;max-height:75vh;}\n@media(max-width:380px){.grid{gap:5px;max-width:98vw;}.card{padding:4px;border-radius:8px;}.card-img{height:50%;border-radius:4px;}.visual{font-size:clamp(20px,7vw,28px);}.nl-text{font-size:clamp(0.65rem,3.5vw,0.9rem);}.pt-sub{font-size:clamp(0.55rem,2.8vw,0.7rem);}header{height:8vh;min-height:44px;padding:0 12px;}header h1{font-size:clamp(0.7rem,3.5vw,0.9rem);}.stats{height:6vh;gap:12px;font-size:0.85rem;}.grid-container{padding:6px;}}\n@media(max-height:600px){.grid{max-height:80vh;}.card-img{height:55%;}}\n.card{background:var(--surface);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.05);text-align:center;transition:transform 0.1s,border-color 0.2s;padding:6px;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;min-height:0;}\n.card:active{transform:scale(0.96);}\n.card.selected{border:3px solid var(--accent);background:#34495e;box-shadow:0 0 10px rgba(52,152,219,0.3);}\n.card.matched{visibility:hidden;pointer-events:none;}\n.card-img{width:100%;height:100%;object-fit:cover;border-radius:6px;}\n.visual{font-size:clamp(26px,8vw,36px);margin-bottom:3px;}\n.nl-text{font-weight:bold;font-size:clamp(0.75rem,4vw,1.05rem);text-transform:uppercase;color:#fff;}\n.pt-sub{font-size:clamp(0.6rem,3vw,0.8rem);color:#bdc3c7;font-weight:bold;}\n#celebration{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;}\n#celebration h2{font-size:clamp(1.1rem,5vw,1.8rem);margin-bottom:10px;}\n#celebration p{font-size:clamp(0.85rem,3vw,1.1rem);color:#bdc3c7;margin-bottom:10px;}\n#celebration button{margin-top:15px;padding:clamp(12px,4vw,18px) clamp(20px,6vw,35px);background:var(--accent);color:white;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:clamp(0.9rem,3.5vw,1.1rem);touch-action:manipulation;}\n</style>\n</head>\n<body>\n<header><h1>'+title+'</h1><div class="header-actions"><button id="voiceBtn" class="voice-toggle" onclick="toggleAudio()">🎧</button><a href="'+backLink+'" style="text-decoration:none;color:white;font-size:clamp(18px,5vw,24px);display:flex;align-items:center;">⬅️</a></div></header>\n<div class="stats"><span style="color:var(--correct)">✓ <span id="ok">0</span></span><span style="color:var(--wrong)">✗ <span id="err">0</span></span><span style="font-size:0.8rem;color:#7f8c8d;">TOTAL: <span id="prog">0</span>/'+total+'</span></div>\n<div class="grid-container"><div class="grid" id="grid"></div></div>\n<div id="celebration"><h2>Concluído! 🎉</h2><p>Você revisou todas as '+total+' palavras.</p><button onclick="location.reload()">RECOMEÇAR</button></div>\n<script>\nconst ALL_DATA=[\n'+dataJS+'\n];\nlet audioEnabled=true,currentIdx=0,batchSize='+batchSize+';\nlet selected=[],ok=0,err=0,totalMatched=0;\nfunction toggleAudio(){audioEnabled=!audioEnabled;document.getElementById("voiceBtn").style.opacity=audioEnabled?"1":"0.3";}\nfunction speakNL(text){if(!audioEnabled)return;window.speechSynthesis.cancel();const msg=new SpeechSynthesisUtterance(text);msg.lang="nl-NL";window.speechSynthesis.speak(msg);}\nfunction loadBatch(){const grid=document.getElementById("grid");grid.innerHTML="";selected=[];const batch=ALL_DATA.slice(currentIdx,currentIdx+batchSize);let cards=[];batch.forEach(w=>{cards.push({...w,type:"art"});cards.push({...w,type:"txt"});});cards.sort(()=>Math.random()-0.5);cards.forEach(card=>{const div=document.createElement("div");div.className="card";if(card.type==="art"){if(card.isImg){div.innerHTML=\'<div style="width:100%;height:60%;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:6px;margin-bottom:4px;"><img class="card-img" src="\'+card.art+\'" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display=\\\\\'none\\\\\';this.parentElement.nextElementSibling.style.display=\\\\\'flex\\\\\'"></div><div class="visual" style="display:none;height:60%;align-items:center;justify-content:center;margin-bottom:4px;">❓</div><span class="pt-sub">\'+card.pt+\'</span>\';}else{div.innerHTML=\'<span class="visual">\'+card.art+\'</span><span class="pt-sub">\'+card.pt+\'</span>\';}}else{div.innerHTML=\'<span class="nl-text">\'+card.nl+\'</span>\';}div.addEventListener("click",e=>{e.preventDefault();if(card.type==="txt")speakNL(card.nl);handleSelect(card,div,batch.length);});div.addEventListener("touchend",e=>{e.preventDefault();if(card.type==="txt")speakNL(card.nl);handleSelect(card,div,batch.length);},{passive:false});grid.appendChild(div);});}\nfunction handleSelect(card,el,batchLen){if(selected.length===2||el.classList.contains("selected")||el.classList.contains("matched"))return;el.classList.add("selected");selected.push({card,el});if(selected.length===2){const[a,b]=selected;if(a.card.nl===b.card.nl&&a.card.type!==b.card.type){ok++;totalMatched++;document.getElementById("ok").textContent=ok;document.getElementById("prog").textContent=totalMatched;setTimeout(()=>{a.el.classList.add("matched");b.el.classList.add("matched");const m=document.querySelectorAll(".matched").length;if(m===batchLen*2){if(currentIdx+batchSize>=ALL_DATA.length){document.getElementById("celebration").style.display="flex";}else{setTimeout(()=>{currentIdx+=batchSize;loadBatch();},600);}}},400);selected=[];}else{err++;document.getElementById("err").textContent=err;setTimeout(()=>{a.el.classList.remove("selected");b.el.classList.remove("selected");selected=[];},600);}}}\nloadBatch();\n<\/script>\n</body>\n</html>';
+
+  const lines = generatedCode.split('\n').length;
+  document.getElementById('codeBody').textContent = generatedCode;
+  document.getElementById('fileLabel').textContent = 'jogo-' + title.toLowerCase().replace(/[^a-z0-9]/g,'-') + '.html';
+  document.getElementById('lineCount').textContent = lines + ' linhas';
+  document.getElementById('copyBtn').style.display = 'block';
+  document.getElementById('downloadBtn').style.display = 'flex';
+  showToast('✅ Gerado! Clique em BAIXAR');
+}
+
+function downloadHTML() {
+  if (!generatedCode) return;
+  const title = document.getElementById('gameTitle').value || 'jogo';
+  const filename = 'jogo-' + title.toLowerCase().replace(/[^a-z0-9]/g,'-') + '.html';
+  const blob = new Blob([generatedCode], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('⬇️ ' + filename + ' baixado!');
+}
+
+function copyCode() {
+  if (!generatedCode) return;
+  navigator.clipboard.writeText(generatedCode).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => btn.textContent = '📋 Copiar', 2000);
+    showToast('📋 Copiado!');
+  });
+}
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.getElementById('genBtn').disabled = true;
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+  document.getElementById('genBtn').disabled = false;
+}
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+function clearAll() {
+  words = []; generatedCode = '';
+  document.getElementById('ocrPreview').style.display = 'none';
+  document.getElementById('ocrText').textContent = '';
+  document.getElementById('manualText').value = '';
+  document.getElementById('codeBody').innerHTML = '<div class="placeholder-msg"><div class="big">⚡</div><div>Processe as palavras e clique em Gerar</div></div>';
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('downloadBtn').style.display = 'none';
+  document.getElementById('fileLabel').textContent = 'aguardando...';
+  document.getElementById('lineCount').textContent = '';
+  words = [{nl:'',pt:'',imgNL:'',imgPT:'',emoji:'❓'}];
+  renderWords();
+}
+
+// INICIALIZAÇÃO SEGURA
+document.addEventListener('DOMContentLoaded', function() {
+  words = [{nl:'',pt:'',imgNL:'',imgPT:'',emoji:'❓'}];
+  renderWords();
+  updatePairCount();
+});
+</script>
+</body>
+</html>
