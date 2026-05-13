@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Gerador Jogo - Colar Imagens</title>
+<title>Gerador Jogo - Multi Imagens</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -160,7 +160,7 @@ body {
   font-weight: 600;
 }
 
-.upload-area {
+.paste-area {
   border: 2px dashed var(--border);
   border-radius: 12px;
   padding: 2rem 1rem;
@@ -172,18 +172,18 @@ body {
   touch-action: manipulation;
   position: relative;
 }
-.upload-area:hover, .upload-area.dragover {
+.paste-area:hover, .paste-area.dragover {
   border-color: var(--accent);
   background: rgba(59, 158, 255, 0.05);
 }
-.upload-area .icon { font-size: 2.5rem; margin-bottom: 8px; }
-.upload-area p { color: var(--muted); font-size: 13px; }
-.upload-area .hint {
+.paste-area .icon { font-size: 2.5rem; margin-bottom: 8px; }
+.paste-area p { color: var(--muted); font-size: 13px; }
+.paste-area .hint {
   font-size: 11px;
   color: var(--accent);
   margin-top: 6px;
 }
-.upload-area input[type=file] { display: none; }
+.paste-area input[type=file] { display: none; }
 
 .pasted-gallery {
   display: grid;
@@ -594,7 +594,7 @@ body {
 <body>
 
 <div class="topbar">
-  <div class="topbar-logo">🎮 jogo<span>.gen</span> <span style="color:var(--accent)">COLAR IMG</span></div>
+  <div class="topbar-logo">🎮 jogo<span>.gen</span> <span style="color:var(--accent)">MULTI IMG</span></div>
   <div class="topbar-actions">
     <button class="btn-ghost" onclick="clearAll()">Limpar</button>
     <button class="btn-primary" onclick="generate()">⚡ Gerar</button>
@@ -602,301 +602,3 @@ body {
 </div>
 
 <div class="main">
-  <div class="left-panel">
-
-    <div class="section-title">Configuracao</div>
-    <div class="config-grid">
-      <div class="field"><label>Titulo</label><input type="text" id="gameTitle" value="VERBOS NEERLANDESES"></div>
-      <div class="field"><label>Link voltar</label><input type="text" id="backLink" value="index.html"></div>
-      <div class="field"><label>Cor fundo</label><input type="text" id="bgColor" value="#1a252f"></div>
-      <div class="field"><label>Cor destaque</label><input type="text" id="accentColor" value="#3498db"></div>
-    </div>
-
-    <div class="section-title">Entrada</div>
-    <div class="toggle-mode">
-      <button class="active" onclick="setMode('image')" id="btnImage">🖼️ Colar/Upload Imagem</button>
-      <button onclick="setMode('manual')" id="btnManual">⌨️ Texto Manual</button>
-    </div>
-
-    <div id="imageMode">
-      <div class="upload-area" id="uploadArea" tabindex="0">
-        <div class="icon">📸</div>
-        <p><strong>Clique aqui e cole (Ctrl+V)</strong></p>
-        <p style="margin-top:4px">ou clique para selecionar arquivo</p>
-        <div class="hint">💡 PrintScreen → Ctrl+V funciona!</div>
-        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(event);this.value=''">
-      </div>
-
-      <div class="pasted-gallery" id="pastedGallery"></div>
-
-      <div class="ocr-preview" id="ocrPreview">
-        <div class="toolbar">
-          <span>Texto detectado:</span>
-          <button class="btn-ghost" style="padding:4px 10px;font-size:11px" onclick="processOCR()">✨ Processar Texto</button>
-        </div>
-        <div class="ocr-text" id="ocrText"></div>
-      </div>
-    </div>
-
-    <div class="manual-input" id="manualMode">
-      <textarea id="manualText" placeholder="zijn - ser / estar&#10;hebben - ter&#10;gaan - ir"></textarea>
-      <div class="hint">Formato: <strong>palavraNL - traducaoPT</strong> (um por linha)</div>
-      <button class="btn-primary" style="margin-top:10px;width:100%" onclick="processManual()">✨ Processar</button>
-    </div>
-
-    <div class="section-title" style="margin-top:1.5rem">Pares NL / PT <span id="pairCount" style="color:var(--accent2);margin-left:8px"></span></div>
-    <div class="words-header">
-      <span>#</span><span>NL</span><span>PT</span><span>Img NL</span><span>Img PT</span><span></span>
-    </div>
-    <div id="wordList"></div>
-    <button class="add-word-btn" onclick="addWord()">＋ Adicionar par</button>
-
-  </div>
-
-  <div class="right-panel">
-    <div class="preview-panel">
-      <div class="section-title">Pre-visualizacao</div>
-      <div class="preview-strip" id="previewStrip">
-        <div style="color:var(--muted);font-size:12px">Adicione pares...</div>
-      </div>
-    </div>
-    <div class="output-panel">
-      <div class="output-header">
-        <div class="section-title" style="margin-bottom:0">Script</div>
-        <button class="btn-success" id="copyBtn" onclick="copyCode()" style="display:none">📋 Copiar</button>
-      </div>
-      <div class="code-wrap">
-        <div class="code-toolbar">
-          <span id="fileLabel">aguardando...</span>
-          <span id="lineCount"></span>
-        </div>
-        <div class="code-body" id="codeBody">
-          <div class="placeholder-msg">
-            <div class="big">⚡</div>
-            <div>Cole imagens ou digite texto<br>e clique em Gerar</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="gen-bar">
-      <button class="gen-full-btn" id="genBtn" onclick="generate()">⚡ GERAR HTML</button>
-      <button class="btn-download" id="downloadBtn" onclick="downloadHTML()" style="display:none">⬇️ BAIXAR .HTML</button>
-    </div>
-  </div>
-</div>
-
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">Processando...</div>
-</div>
-<div class="toast" id="toast"></div>
-
-<script>
-let words = [];
-let generatedCode = '';
-let currentMode = 'image';
-let tesseractLoaded = false;
-let pastedImages = [];
-let extractedText = '';
-
-function setMode(mode) {
-  currentMode = mode;
-  document.getElementById('btnImage').classList.toggle('active', mode === 'image');
-  document.getElementById('btnManual').classList.toggle('active', mode === 'manual');
-  document.getElementById('imageMode').style.display = mode === 'image' ? 'block' : 'none';
-  document.getElementById('manualMode').style.display = mode === 'manual' ? 'block' : 'none';
-}
-
-const uploadArea = document.getElementById('uploadArea');
-
-uploadArea.addEventListener('click', function(e) {
-  if (e.target.tagName !== 'INPUT') {
-    document.getElementById('fileInput').click();
-  }
-});
-
-uploadArea.addEventListener('paste', function(e) {
-  e.preventDefault();
-  const items = e.clipboardData.items;
-  let found = false;
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      found = true;
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        addPastedImage(evt.target.result);
-      };
-      reader.readAsDataURL(blob);
-    }
-  }
-  if (!found) {
-    showToast('Nenhuma imagem na area de transferencia. Use PrintScreen + Ctrl+V', true);
-  }
-});
-
-uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-uploadArea.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadArea.classList.remove('dragover');
-  for (let f of e.dataTransfer.files) {
-    if (f.type.indexOf('image') !== -1) {
-      const r = new FileReader();
-      r.onload = evt => addPastedImage(evt.target.result);
-      r.readAsDataURL(f);
-    }
-  }
-});
-
-function handleFiles(e) {
-  for (let f of e.target.files) {
-    if (f.type.indexOf('image') !== -1) {
-      const r = new FileReader();
-      r.onload = evt => addPastedImage(evt.target.result);
-      r.readAsDataURL(f);
-    }
-  }
-}
-
-function addPastedImage(dataUrl) {
-  const id = Date.now() + Math.random();
-  pastedImages.push({ id, src: dataUrl, text: '', status: 'pending' });
-  renderGallery();
-  
-  if (!tesseractLoaded) {
-    showLoading('Carregando OCR...');
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
-    script.onload = () => {
-      tesseractLoaded = true;
-      runOCR(dataUrl, id);
-    };
-    script.onerror = () => {
-      hideLoading();
-      showToast('Erro ao carregar OCR', true);
-    };
-    document.head.appendChild(script);
-  } else {
-    runOCR(dataUrl, id);
-  }
-}
-
-function renderGallery() {
-  const gallery = document.getElementById('pastedGallery');
-  gallery.innerHTML = pastedImages.map(img => `
-    <div class="pasted-item">
-      <img src="${img.src}" alt="">
-      <button class="remove" onclick="removePastedImage(${img.id})">×</button>
-      <div class="status" id="status-${img.id}">${img.status === 'pending' ? '⏳ OCR...' : img.status === 'done' ? '✅ Pronto' : '❌ Erro'}</div>
-    </div>
-  `).join('');
-}
-
-function removePastedImage(id) {
-  pastedImages = pastedImages.filter(p => p.id !== id);
-  renderGallery();
-  updateExtractedText();
-}
-
-function runOCR(imageData, id) {
-  showLoading('OCR em andamento...');
-  Tesseract.recognize(imageData, 'eng+nld', {
-    logger: m => {
-      if (m.status === 'recognizing text') {
-        const pct = Math.round(m.progress * 100);
-        document.getElementById('loadingText').textContent = 'OCR: ' + pct + '%';
-        const st = document.getElementById('status-' + id);
-        if (st) st.textContent = '⏳ ' + pct + '%';
-      }
-    }
-  }).then(({ data: { text } }) => {
-    hideLoading();
-    const img = pastedImages.find(p => p.id === id);
-    if (img) {
-      img.text = text;
-      img.status = 'done';
-    }
-    const st = document.getElementById('status-' + id);
-    if (st) st.textContent = '✅ Pronto';
-    updateExtractedText();
-    showToast('✅ Texto extraido! Clique em Processar');
-  }).catch(err => {
-    hideLoading();
-    const img = pastedImages.find(p => p.id === id);
-    if (img) img.status = 'error';
-    const st = document.getElementById('status-' + id);
-    if (st) st.textContent = '❌ Erro';
-    showToast('OCR falhou nesta imagem', true);
-  });
-}
-
-function updateExtractedText() {
-  const allText = pastedImages.filter(p => p.text).map(p => p.text).join('\n');
-  extractedText = allText;
-  if (allText) {
-    document.getElementById('ocrPreview').style.display = 'block';
-    document.getElementById('ocrText').textContent = allText;
-  } else {
-    document.getElementById('ocrPreview').style.display = 'none';
-  }
-}
-
-function processOCR() {
-  processText(extractedText);
-}
-
-function processManual() {
-  processText(document.getElementById('manualText').value);
-}
-
-function processText(text) {
-  if (!text || !text.trim()) { showToast('Sem texto para processar', true); return; }
-  showLoading('Processando pares...');
-  setTimeout(() => {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const newWords = [];
-    for (const line of lines) {
-      const clean = line.replace(/^[-•·]\s*/, '').trim();
-      if (!clean) continue;
-      let parts = clean.split(/\s*[-\u2014\u2192:=]\s+/);
-      if (parts.length < 2) parts = clean.split(/\s{2,}/);
-      if (parts.length < 2) {
-        const m = clean.match(/^([a-zA-Z\s]+?)(\s+)([a-zA-Z\s].+)$/);
-        if (m) parts = [m[1].trim(), m[3].trim()];
-      }
-      if (parts.length >= 2) {
-        const nl = parts[0].trim(), pt = parts.slice(1).join(' ').trim();
-        if (nl.length > 1 && pt.length > 1) newWords.push({ nl, pt, imgNL: '', imgPT: '', emoji: getEmoji(nl, pt) });
-      }
-    }
-    if (newWords.length === 0) { hideLoading(); showToast('Nenhum par encontrado', true); return; }
-    words = newWords;
-    renderWords();
-    updateCount();
-    hideLoading();
-    showToast(newWords.length + ' pares! Clique nos slots para buscar imagens');
-  }, 100);
-}
-
-function getEmoji(nl, pt) {
-  const map = { 'zijn':'🔵','hebben':'🤲','gaan':'🚶','willen':'💭','kunnen':'💪','mogen':'✅','moeten':'⚠️','zullen':'🔮','worden':'🦋' };
-  return map[nl.toLowerCase()] || map[pt.toLowerCase()] || '❓';
-}
-
-function updateCount() {
-  const c = words.filter(w => w.nl && w.pt).length;
-  document.getElementById('pairCount').textContent = c ? '(' + c + ' pares)' : '';
-}
-
-function renderWords() {
-  const list = document.getElementById('wordList');
-  if (!words.length) {
-    list.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Nenhum par</div>';
-    updatePreview(); return;
-  }
-  list.innerHTML = words.map((w, i) => `
-    <div class="word-row">
-      <div class="word-num">${String(i+1).padStart(2, '0')}</div>
-      <input type="text" placeholder="NL" value="${esc(w.nl)}" oninput="words[${i}].nl=this.value;updatePreview();updateCount();">
-      <input type="text" placeholder="PT" value="${esc(w.pt)}" oninput="words[${i}].pt=this.value;update
