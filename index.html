@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Gerador Jogo com OCR Real</title>
+<title>Gerador Jogo com OCR e Unsplash</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
@@ -201,7 +201,7 @@ body {
 }
 .word-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 80px 40px;
+  grid-template-columns: 1fr 1fr 80px 80px 40px;
   gap: 8px;
   padding: 8px;
   background: var(--surface);
@@ -329,7 +329,7 @@ body {
 <body>
 
 <div class="topbar">
-  <div class="topbar-logo">🎮 GERADOR DE JOGO COM OCR</div>
+  <div class="topbar-logo">🎮 GERADOR DE JOGO COM OCR + UNSPLASH</div>
   <div>
     <button class="btn-secondary" onclick="clearAll()">Limpar Tudo</button>
   </div>
@@ -337,11 +337,12 @@ body {
 
 <div class="main">
   <div class="left-panel">
-    <div class="section-title">📸 1. COLE AS IMAGENS</div>
+    <div class="section-title">📸 1. COLE AS IMAGENS COM TEXTO</div>
     <div class="paste-area" id="pasteArea">
       <div style="font-size: 3rem;">🖼️</div>
       <p><strong>Clique aqui para selecionar imagens</strong></p>
       <p style="font-size: 12px; color: var(--muted);">Ou arraste imagens aqui • Use Ctrl+V para colar</p>
+      <p style="font-size: 11px; color: var(--accent2); margin-top: 8px;">💡 As imagens devem conter texto em dois idiomas (ex: NL e PT)</p>
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
     </div>
 
@@ -355,28 +356,31 @@ body {
     <div id="ocrResults" class="ocr-result-area" style="display: none;">
       <div class="language-row">
         <div class="language-box">
-          <h4>🇵🇹 Português</h4>
-          <textarea id="portugueseText" placeholder="Texto em português aparecerá aqui..."></textarea>
+          <h4>🇳🇱 NL / Outro Idioma (Original)</h4>
+          <textarea id="originalText" placeholder="Texto no idioma original aparecerá aqui..."></textarea>
         </div>
         <div class="language-box">
-          <h4>🌍 Outro Idioma</h4>
-          <textarea id="otherText" placeholder="Texto no outro idioma aparecerá aqui..."></textarea>
+          <h4>🇵🇹 Português (Tradução)</h4>
+          <textarea id="portugueseText" placeholder="Texto em português aparecerá aqui..."></textarea>
         </div>
       </div>
       <button class="btn-secondary" onclick="extractPairs()" style="width: 100%; margin-top: 8px;">
-        📝 Extrair Pares Palavra ↔ Tradução
+        📝 Extrair Pares (NL ↔ PT)
       </button>
     </div>
 
-    <div class="section-title">📋 3. PARES PALAVRA ↔ TRADUÇÃO</div>
+    <div class="section-title">📋 3. PARES PALAVRA (NL ↔ PT)</div>
     <div class="words-table" id="wordsTable"></div>
+    <button class="btn-secondary" onclick="fetchUnsplashImages()" style="width: 100%; margin-top: 8px;">
+      🌄 Buscar Imagens do Unsplash para todas as palavras
+    </button>
     <button class="btn-secondary" onclick="addEmptyPair()" style="width: 100%; margin-top: 8px;">
       + Adicionar Par Manualmente
     </button>
   </div>
 
   <div class="right-panel">
-    <div class="section-title" style="padding: 1rem 1rem 0 1rem;">👁️ Prévia</div>
+    <div class="section-title" style="padding: 1rem 1rem 0 1rem;">👁️ Prévia dos Pares</div>
     <div class="preview-strip" id="previewStrip">
       <div style="color: var(--muted); text-align: center; width: 100%;">Nenhum par adicionado</div>
     </div>
@@ -402,38 +406,38 @@ body {
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div id="loadingText" style="margin-top: 1rem;">Processando OCR...</div>
+  <div id="loadingText" style="margin-top: 1rem;">Processando...</div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
 // Estado global
-let images = []; // { id, dataUrl, name, ocrText }
-let wordPairs = []; // { portuguese, translation, image }
+let images = [];
+let wordPairs = []; // { original, portuguese, imageUrl }
+
+// Unsplash API (usando endpoint público de busca)
+const UNSPLASH_ACCESS_KEY = 'demo'; // Para demo, usa-se busca sem autenticação
+// Usando a API pública do Unsplash Source para imagens gratuitas
 
 // Inicialização
 window.onload = function() {
   console.log('Inicializando...');
   
-  // Configurar área de upload
   const pasteArea = document.getElementById('pasteArea');
   const fileInput = document.getElementById('fileInput');
   
-  // Clique para selecionar arquivos
   pasteArea.onclick = function() {
     fileInput.click();
   };
   
-  // Seleção de arquivos
   fileInput.onchange = function(e) {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
       addImages(files);
-      fileInput.value = ''; // Limpar para permitir selecionar os mesmos arquivos novamente
+      fileInput.value = '';
     }
   };
   
-  // Drag and drop
   pasteArea.ondragover = function(e) {
     e.preventDefault();
     this.classList.add('dragover');
@@ -452,7 +456,6 @@ window.onload = function() {
     }
   };
   
-  // Colar imagens (Ctrl+V)
   document.addEventListener('paste', function(e) {
     const items = Array.from(e.clipboardData.items);
     const imageItems = items.filter(item => item.type.startsWith('image/'));
@@ -471,7 +474,6 @@ window.onload = function() {
     }
   });
   
-  // Adicionar par inicial
   addEmptyPair();
 };
 
@@ -491,7 +493,6 @@ function hideLoading() {
   document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-// Adicionar imagens
 function addImages(files) {
   if (!files || files.length === 0) return;
   
@@ -537,7 +538,6 @@ function renderImageGallery() {
   `).join('');
 }
 
-// OCR em todas as imagens
 async function ocrAllImages() {
   if (images.length === 0) {
     showToast('Adicione imagens primeiro!', true);
@@ -545,24 +545,24 @@ async function ocrAllImages() {
   }
   
   showLoading('Executando OCR... Isso pode levar alguns segundos');
+  let allOriginal = [];
   let allPortuguese = [];
-  let allOther = [];
   
   for (let i = 0; i < images.length; i++) {
     const img = images[i];
     document.getElementById('loadingText').textContent = `Processando imagem ${i+1}/${images.length}: ${img.name}`;
     
     try {
-      // Tentar detectar português
+      // Tentar detectar inglês/holandês como idioma original
+      const resultOrig = await Tesseract.recognize(img.dataUrl, 'nld+eng');
       const resultPt = await Tesseract.recognize(img.dataUrl, 'por');
-      const resultEn = await Tesseract.recognize(img.dataUrl, 'eng');
       
+      const origText = resultOrig.data.text;
       const ptText = resultPt.data.text;
-      const enText = resultEn.data.text;
       
-      img.ocrText = { portuguese: ptText, other: enText };
+      img.ocrText = { original: origText, portuguese: ptText };
+      allOriginal.push(origText);
       allPortuguese.push(ptText);
-      allOther.push(enText);
       
       showToast(`OCR completo: ${img.name}`);
       
@@ -572,57 +572,53 @@ async function ocrAllImages() {
     }
   }
   
-  // Mostrar resultados
+  const originalArea = document.getElementById('originalText');
   const portugueseArea = document.getElementById('portugueseText');
-  const otherArea = document.getElementById('otherText');
   
+  originalArea.value = allOriginal.join('\n---\n');
   portugueseArea.value = allPortuguese.join('\n---\n');
-  otherArea.value = allOther.join('\n---\n');
   
   document.getElementById('ocrResults').style.display = 'block';
   hideLoading();
   showToast(`OCR concluído! ${images.length} imagem(ns) processada(s)`);
 }
 
-// Extrair pares dos textos
 function extractPairs() {
+  const originalText = document.getElementById('originalText').value;
   const portugueseText = document.getElementById('portugueseText').value;
-  const otherText = document.getElementById('otherText').value;
   
-  if (!portugueseText.trim() || !otherText.trim()) {
+  if (!originalText.trim() || !portugueseText.trim()) {
     showToast('Ambos os textos são necessários para extrair pares', true);
     return;
   }
   
-  // Dividir em linhas
+  let origLines = originalText.split(/\n|---/);
   let ptLines = portugueseText.split(/\n|---/);
-  let otherLines = otherText.split(/\n|---/);
   
+  origLines = origLines.map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
   ptLines = ptLines.map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
-  otherLines = otherLines.map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
   
-  const maxPairs = Math.min(ptLines.length, otherLines.length);
+  const maxPairs = Math.min(origLines.length, ptLines.length);
   
   if (maxPairs === 0) {
     showToast('Não foi possível extrair pares. Verifique os textos.', true);
     return;
   }
   
-  // Limpar pares existentes
   wordPairs = [];
   
   for (let i = 0; i < maxPairs && i < 20; i++) {
-    let ptWord = ptLines[i].replace(/[0-9]/g, '').split(' ')[0].toUpperCase();
-    let otherWord = otherLines[i].replace(/[0-9]/g, '').split(' ')[0].toUpperCase();
+    let origWord = origLines[i].split(' ')[0].toUpperCase();
+    let ptWord = ptLines[i].split(' ')[0].toUpperCase();
     
+    origWord = origWord.replace(/[^A-Za-zÀ-ÿ]/g, '');
     ptWord = ptWord.replace(/[^A-ZÁÉÍÓÚÃÕÂÊÎÔÛÇ]/g, '');
-    otherWord = otherWord.replace(/[^A-Z]/g, '');
     
-    if (ptWord.length > 1 && otherWord.length > 1) {
+    if (origWord.length > 1 && ptWord.length > 1) {
       wordPairs.push({
+        original: origWord,
         portuguese: ptWord,
-        translation: otherWord,
-        image: null
+        imageUrl: null
       });
     }
   }
@@ -638,11 +634,42 @@ function extractPairs() {
   renderPreview();
 }
 
+async function fetchUnsplashImages() {
+  const validPairs = wordPairs.filter(p => p.original && p.portuguese);
+  
+  if (validPairs.length === 0) {
+    showToast('Adicione pares de palavras primeiro!', true);
+    return;
+  }
+  
+  showLoading('Buscando imagens no Unsplash...');
+  
+  for (let i = 0; i < wordPairs.length; i++) {
+    const pair = wordPairs[i];
+    if (!pair.original && !pair.portuguese) continue;
+    
+    const searchTerm = pair.portuguese || pair.original;
+    document.getElementById('loadingText').textContent = `Buscando imagem para: ${searchTerm}`;
+    
+    // Usando Unsplash Source (imagens gratuitas baseadas em busca)
+    // URL: https://source.unsplash.com/featured/300x300?[termo]
+    pair.imageUrl = `https://source.unsplash.com/featured/300x300?${encodeURIComponent(searchTerm)}&sig=${Date.now()}_${i}`;
+    
+    // Pequeno delay para não sobrecarregar
+    await new Promise(r => setTimeout(r, 200));
+  }
+  
+  renderWordsTable();
+  renderPreview();
+  hideLoading();
+  showToast(`${wordPairs.filter(p => p.imageUrl).length} imagens adicionadas!`);
+}
+
 function addEmptyPair() {
   wordPairs.push({
+    original: '',
     portuguese: '',
-    translation: '',
-    image: null
+    imageUrl: null
   });
   renderWordsTable();
 }
@@ -659,7 +686,7 @@ function removePair(index) {
   renderPreview();
 }
 
-function addImageToPair(index) {
+function addCustomImage(index) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -668,10 +695,10 @@ function addImageToPair(index) {
     if (file) {
       const reader = new FileReader();
       reader.onload = function(ev) {
-        wordPairs[index].image = ev.target.result;
+        wordPairs[index].imageUrl = ev.target.result;
         renderWordsTable();
         renderPreview();
-        showToast('Imagem adicionada ao par!');
+        showToast('Imagem personalizada adicionada!');
       };
       reader.readAsDataURL(file);
     }
@@ -690,25 +717,45 @@ function renderWordsTable() {
   
   container.innerHTML = wordPairs.map((pair, idx) => `
     <div class="word-row">
-      <input type="text" placeholder="Palavra em Português" 
+      <input type="text" placeholder="NL/Original" 
+             value="${escHtml(pair.original)}"
+             onchange="updatePair(${idx}, 'original', this.value)"
+             style="background: #2a1a3a;">
+      <input type="text" placeholder="Português"
              value="${escHtml(pair.portuguese)}"
-             onchange="updatePair(${idx}, 'portuguese', this.value)">
-      <input type="text" placeholder="Tradução/Outro Idioma"
-             value="${escHtml(pair.translation)}"
-             onchange="updatePair(${idx}, 'translation', this.value)">
-      <div class="img-preview" onclick="addImageToPair(${idx})">
-        ${pair.image ? `<img src="${pair.image}" alt="imagem">` : '📷'}
+             onchange="updatePair(${idx}, 'portuguese', this.value)"
+             style="background: #1a3a2a;">
+      <div class="img-preview" onclick="addCustomImage(${idx})">
+        ${pair.imageUrl ? `<img src="${pair.imageUrl}" alt="imagem" crossorigin="anonymous">` : '📷 Unsplash'}
       </div>
+      <button class="btn-secondary" onclick="fetchSingleImage(${idx})" style="width: auto; padding: 4px 8px; font-size: 10px;">🔄 Buscar</button>
       <button class="btn-secondary" onclick="removePair(${idx})" style="width: auto; padding: 4px 8px;">🗑️</button>
     </div>
   `).join('');
+}
+
+async function fetchSingleImage(index) {
+  const pair = wordPairs[index];
+  const searchTerm = pair.portuguese || pair.original;
+  
+  if (!searchTerm) {
+    showToast('Digite uma palavra primeiro!', true);
+    return;
+  }
+  
+  showLoading(`Buscando imagem para: ${searchTerm}`);
+  pair.imageUrl = `https://source.unsplash.com/featured/300x300?${encodeURIComponent(searchTerm)}&sig=${Date.now()}`;
+  renderWordsTable();
+  renderPreview();
+  hideLoading();
+  showToast(`Imagem buscada para: ${searchTerm}`);
 }
 
 function renderPreview() {
   const strip = document.getElementById('previewStrip');
   if (!strip) return;
   
-  const validPairs = wordPairs.filter(p => p.portuguese && p.translation);
+  const validPairs = wordPairs.filter(p => p.original && p.portuguese);
   
   if (validPairs.length === 0) {
     strip.innerHTML = '<div style="color: var(--muted); text-align: center; width: 100%;">Nenhum par válido</div>';
@@ -717,15 +764,17 @@ function renderPreview() {
   
   strip.innerHTML = validPairs.map(pair => `
     <div class="preview-card">
-      ${pair.image ? `<img src="${pair.image}" alt="img">` : '<div style="font-size: 2rem;">📝</div>'}
-      <div style="font-size: 11px; margin-top: 4px;"><strong>${escHtml(pair.portuguese)}</strong><br>→ ${escHtml(pair.translation)}</div>
+      ${pair.imageUrl ? `<img src="${pair.imageUrl}" alt="img" crossorigin="anonymous">` : '<div style="font-size: 2rem;">📝</div>'}
+      <div style="font-size: 11px; margin-top: 4px;">
+        <strong>${escHtml(pair.original)}</strong><br>
+        → ${escHtml(pair.portuguese)}
+      </div>
     </div>
   `).join('');
 }
 
-// Gerar jogo
 function generateGame() {
-  const validPairs = wordPairs.filter(p => p.portuguese && p.translation);
+  const validPairs = wordPairs.filter(p => p.original && p.portuguese);
   
   if (validPairs.length === 0) {
     showToast('Adicione pelo menos um par de palavras!', true);
@@ -743,28 +792,27 @@ function generateGame() {
 }
 
 function generateMatchingGame(pairs) {
-  const title = document.getElementById('gameTitle')?.value || 'Jogo de Associação';
+  const title = 'Jogo de Associação NL ↔ PT';
   
-  // Criar cards
+  // Criar cards para NL e PT
   const cards = [];
   pairs.forEach((pair, idx) => {
+    cards.push({
+      id: `nl_${idx}`,
+      text: pair.original,
+      pairId: idx,
+      image: pair.imageUrl,
+      type: 'nl'
+    });
     cards.push({
       id: `pt_${idx}`,
       text: pair.portuguese,
       pairId: idx,
-      image: pair.image,
-      type: 'pt'
-    });
-    cards.push({
-      id: `tr_${idx}`,
-      text: pair.translation,
-      pairId: idx,
       image: null,
-      type: 'tr'
+      type: 'pt'
     });
   });
   
-  // Embaralhar
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]];
@@ -780,12 +828,12 @@ function generateMatchingGame(pairs) {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
     min-height: 100vh;
     padding: 20px;
   }
   .container { max-width: 1200px; margin: 0 auto; }
-  h1 { text-align: center; color: white; margin-bottom: 10px; font-size: 2rem; }
+  h1 { text-align: center; color: white; margin-bottom: 10px; font-size: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
   .subtitle { text-align: center; color: rgba(255,255,255,0.9); margin-bottom: 30px; }
   .game-board {
     display: grid;
@@ -806,19 +854,40 @@ function generateMatchingGame(pairs) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
   .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
   .card.selected { background: #ffeaa7; transform: scale(1.02); border: 3px solid #fdcb6e; }
-  .card.matched { opacity: 0.5; background: #55efc4; cursor: default; transform: none; }
+  .card.matched { opacity: 0.6; background: #55efc4; cursor: default; transform: none; text-decoration: line-through; }
   .card img { max-width: 80px; max-height: 80px; margin-bottom: 10px; border-radius: 8px; }
   .card-text { font-size: 1.2rem; font-weight: bold; color: #2d3436; }
+  .nl-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #e17055;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+  }
+  .pt-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #6c5ce7;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+  }
   .score {
     text-align: center;
     font-size: 1.2rem;
     color: white;
     margin-top: 20px;
     padding: 15px;
-    background: rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.3);
     border-radius: 10px;
   }
   .btn {
@@ -831,15 +900,24 @@ function generateMatchingGame(pairs) {
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
+    transition: transform 0.2s;
   }
   .btn:hover { transform: scale(1.05); }
-  .victory { text-align: center; font-size: 1.5rem; color: #fdcb6e; margin-top: 20px; }
+  .victory { text-align: center; font-size: 1.5rem; color: #fdcb6e; margin-top: 20px; animation: bounce 0.5s; }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @media (max-width: 768px) {
+    .game-board { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .card-text { font-size: 1rem; }
+  }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>🎮 ${escHtml(title)}</h1>
-  <div class="subtitle">Encontre os pares correspondentes</div>
+  <div class="subtitle">🇳🇱 Encontre o par correspondente em 🇵🇹</div>
   <div class="game-board" id="gameBoard"></div>
   <div class="score" id="score">Pares encontrados: 0 / ${pairs.length}</div>
   <button class="btn" onclick="resetGame()">🔄 Reiniciar Jogo</button>
@@ -875,109 +953,5 @@ function generateMatchingGame(pairs) {
       return \`
         <div class="card \${isMatched ? 'matched' : ''} \${isSelected ? 'selected' : ''}" 
              onclick="selectCard(\${idx})">
-          \${card.image ? \`<img src="\${card.image}" alt="imagem">\` : ''}
-          <div class="card-text">\${!isMatched ? card.text : '✓'}</div>
-        </div>
-      \`;
-    }).join('');
-  }
-  
-  function selectCard(index) {
-    if (lockBoard) return;
-    const card = currentCards[index];
-    if (card.matched) return;
-    
-    if (!selectedCard) {
-      selectedCard = { index, pairId: card.pairId, type: card.type };
-      renderBoard();
-    } else {
-      if (selectedCard.index === index) {
-        selectedCard = null;
-        renderBoard();
-        return;
-      }
-      
-      const firstCard = currentCards[selectedCard.index];
-      const secondCard = currentCards[index];
-      
-      if (firstCard.pairId === secondCard.pairId && firstCard.type !== secondCard.type) {
-        firstCard.matched = true;
-        secondCard.matched = true;
-        matchedPairs++;
-        selectedCard = null;
-        renderBoard();
-        document.getElementById('score').innerHTML = \`Pares encontrados: \${matchedPairs} / ${pairs.length}\`;
-        
-        if (matchedPairs === ${pairs.length}) {
-          document.getElementById('victory').innerHTML = '🎉 PARABÉNS! VOCÊ COMPLETOU O JOGO! 🎉';
-        }
-      } else {
-        lockBoard = true;
-        const wrongFirst = selectedCard.index;
-        const wrongSecond = index;
-        selectedCard = null;
-        renderBoard();
-        
-        setTimeout(() => {
-          lockBoard = false;
-          renderBoard();
-        }, 1000);
-      }
-    }
-  }
-  
-  function resetGame() { initGame(); }
-  
-  initGame();
-<\/script>
-</body>
-</html>`;
-}
-
-function escHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function copyCode() {
-  const code = document.getElementById('codeContent').textContent;
-  if (!code || code === 'Clique em "Gerar Jogo" para criar o HTML') {
-    showToast('Gere o jogo primeiro!', true);
-    return;
-  }
-  navigator.clipboard.writeText(code).then(() => showToast('Código copiado!'));
-}
-
-function downloadGame() {
-  const code = document.getElementById('codeContent').textContent;
-  if (!code || code === 'Clique em "Gerar Jogo" para criar o HTML') {
-    showToast('Gere o jogo primeiro!', true);
-    return;
-  }
-  
-  const blob = new Blob([code], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'jogo_associacao.html';
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('Download iniciado!');
-}
-
-function clearAll() {
-  if (confirm('Tem certeza que deseja limpar tudo?')) {
-    images = [];
-    wordPairs = [];
-    renderImageGallery();
-    addEmptyPair();
-    document.getElementById('ocrResults').style.display = 'none';
-    document.getElementById('portugueseText').value = '';
-    document.getElementById('otherText').value = '';
-    document.getElementById('codeContent').textContent = 'Clique em "Gerar Jogo" para criar o HTML';
-    showToast('Tudo limpo!');
-  }
-}
-</script>
-</body>
-</html>
+          <div class="\${card.type === 'nl' ? 'nl-badge' : 'pt-badge'}">\${card.type === 'nl' ? 'NL' : 'PT'}</div>
+          \${card.image && !isMatched ? \`<img
