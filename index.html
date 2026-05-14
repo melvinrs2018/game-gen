@@ -75,4 +75,728 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  wid
+  width: 100%;
+}
+.btn-download:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 0;
+  min-height: calc(100vh - 56px);
+  min-height: calc(100dvh - 56px);
+}
+.left-panel {
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  height: calc(100dvh - 56px);
+  position: sticky;
+  top: 56px;
+}
+.section-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.field input[type=text], .field select {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  width: 100%;
+}
+.field input[type=text]:focus, .field select:focus { outline: none; border-color: var(--accent); }
+.field select option { background: var(--surface); }
+
+.toggle-mode {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+.toggle-mode button {
+  flex: 1;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.15s;
+}
+.toggle-mode button.active {
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.paste-area {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 2rem 1rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  background: var(--surface);
+  touch-action: manipulation;
+  position: relative;
+}
+.paste-area:hover, .paste-area.dragover {
+  border-color: var(--accent);
+  background: rgba(59, 158, 255, 0.05);
+}
+.paste-area .icon { font-size: 2.5rem; margin-bottom: 8px; }
+.paste-area p { color: var(--muted); font-size: 13px; }
+.paste-area .hint {
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 6px;
+}
+.paste-area input[type=file] { display: none; }
+
+.pasted-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-bottom: 1.5rem;
+}
+.pasted-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  aspect-ratio: 4/3;
+}
+.pasted-item img { width: 100%; height: 100%; object-fit: cover; }
+.pasted-item .remove {
+  position: absolute; top: 4px; right: 4px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--danger); color: white; border: none;
+  font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.pasted-item .status {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.7); color: white;
+  font-size: 9px; padding: 3px 6px; text-align: center;
+}
+
+.ocr-preview {
+  background: var(--surface); border-radius: 10px;
+  padding: 1rem; margin-bottom: 1.5rem;
+  border: 1px solid var(--border); display: none;
+}
+.ocr-preview .toolbar {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 6px;
+}
+.ocr-preview .toolbar span { font-size: 11px; color: var(--muted); }
+.ocr-text {
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  color: var(--muted); white-space: pre-wrap;
+  max-height: 150px; overflow-y: auto;
+  background: #0a1118; padding: 10px; border-radius: 6px;
+}
+
+.manual-input { display: none; margin-bottom: 1.5rem; }
+.manual-input textarea {
+  width: 100%; min-height: 180px; padding: 12px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-family: 'Space Mono', monospace; font-size: 12px; resize: vertical;
+}
+.manual-input .hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+.words-header {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 80px 80px 28px;
+  gap: 6px; padding: 0 4px; margin-bottom: 8px;
+}
+.words-header span {
+  font-size: 9px; color: var(--muted);
+  text-align: center; text-transform: uppercase;
+}
+.word-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 80px 80px 28px;
+  gap: 6px; align-items: center; margin-bottom: 8px;
+  padding: 6px; background: rgba(255,255,255,0.02);
+  border-radius: 8px; border: 1px solid var(--border);
+}
+.word-num {
+  width: 36px; height: 28px; background: var(--surface2);
+  border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; font-family: 'Space Mono', monospace;
+  font-size: 10px; color: var(--muted);
+}
+.word-row input[type=text] {
+  height: 28px; padding: 0 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 12px;
+  font-family: 'DM Sans', sans-serif; width: 100%;
+}
+.word-row input[type=text]:focus { outline: none; border-color: var(--accent); }
+
+.img-slot {
+  width: 80px; height: 50px; border-radius: 6px;
+  border: 2px dashed var(--border); background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  font-size: 10px; color: var(--muted); transition: all 0.15s;
+}
+.img-slot:hover { border-color: var(--accent); color: var(--accent); }
+.img-slot.has-img { border-style: solid; border-color: var(--accent2); }
+.img-slot img { width: 100%; height: 100%; object-fit: cover; }
+.img-slot .remove-img {
+  position: absolute; top: 2px; right: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--danger); color: white; border: none;
+  font-size: 9px; cursor: pointer; display: none;
+  align-items: center; justify-content: center; z-index: 2;
+}
+.img-slot.has-img:hover .remove-img { display: flex; }
+.img-slot .label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.6); color: white;
+  font-size: 8px; text-align: center; padding: 1px;
+}
+
+.del-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: none; background: none; color: var(--muted);
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.del-btn:hover { color: var(--danger); }
+.add-word-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px; border-radius: 8px;
+  border: 1px dashed var(--border); background: none;
+  color: var(--muted); font-size: 13px; cursor: pointer;
+  width: 100%; justify-content: center; margin-top: 4px;
+  font-family: 'DM Sans', sans-serif;
+}
+.add-word-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+.preview-panel {
+  padding: 1.5rem; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.preview-strip {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 10px; min-height: 50px;
+}
+.prev-card {
+  background: var(--surface2); border-radius: 8px;
+  padding: 6px 10px; display: flex; flex-direction: column;
+  align-items: center; gap: 2px; font-size: 11px;
+  color: var(--muted); min-width: 56px;
+}
+.prev-card img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+.prev-card .em { font-size: 18px; }
+.prev-card.txt-card {
+  background: var(--surface); border: 1px solid var(--border);
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--text); text-transform: uppercase;
+}
+
+.output-panel {
+  flex: 1; padding: 1.5rem;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.output-header {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 10px;
+}
+.code-wrap {
+  flex: 1; background: #0a1118; border-radius: 10px;
+  border: 1px solid var(--border); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.code-toolbar {
+  background: var(--surface2); padding: 8px 12px;
+  display: flex; justify-content: space-between;
+  align-items: center; border-bottom: 1px solid var(--border);
+}
+.code-toolbar span { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+.code-body {
+  flex: 1; overflow-y: auto; padding: 12px;
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: #7ec8a0; white-space: pre-wrap; word-wrap: break-word;
+  line-height: 1.6;
+}
+.placeholder-msg {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 8px; color: var(--muted);
+  font-size: 13px; text-align: center;
+}
+.placeholder-msg .big { font-size: 2.5rem; }
+
+.gen-bar {
+  padding: 1rem; border-top: 1px solid var(--border);
+  background: var(--surface); display: flex; flex-direction: column; gap: 8px;
+}
+.gen-full-btn {
+  width: 100%; padding: 14px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, var(--accent) 0%, #005bbb 100%);
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+}
+.gen-full-btn:hover { opacity: 0.9; }
+.gen-full-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.loading-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 25, 35, 0.9); display: none;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 15px; z-index: 9998;
+}
+.loading-overlay.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--surface2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--text); font-size: 14px; }
+
+.toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--accent2); color: #0f1923;
+  padding: 10px 22px; border-radius: 20px;
+  font-weight: 700; font-size: 13px; opacity: 0;
+  transition: all 0.3s; pointer-events: none; z-index: 9999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--danger); color: #fff; }
+
+@media (max-width: 768px) {
+  .main { grid-template-columns: 1fr; }
+  .right-panel { position: relative; top: 0; height: auto; }
+  .config-grid { grid-template-columns: 1fr; }
+  .words-header { display: none; }
+  .word-row { grid-template-columns: 28px 1fr 1fr 1fr 1fr 26px; gap: 4px; padding: 4px; }
+  .word-num { width: 28px; height: 28px; font-size: 9px; }
+  .img-slot { width: 100%; height: 45px; }
+  .word-row input[type=text] { height: 28px; font-size: 11px; }
+  .left-panel { padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">🎮 jogo<span>.gen</span> <span style="color:var(--accent)">MULTI IMG</span></div>
+  <div class="topbar-actions">
+    <button class="btn-ghost" onclick="clearAll()">Limpar</button>
+    <button class="btn-primary" onclick="generate()">⚡ Gerar</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="section-title">⚙ Configurações</div>
+    <div class="config-grid">
+      <div class="field">
+        <label>Título do Jogo</label>
+        <input type="text" id="gameTitle" placeholder="Ex: Caça Palavras" value="Jogo de Palavras">
+      </div>
+      <div class="field">
+        <label>Tipo de Jogo</label>
+        <select id="gameType">
+          <option value="matching">Associação Palavra-Imagem</option>
+          <option value="quiz">Quiz com Imagens</option>
+          <option value="memory">Jogo da Memória</option>
+          <option value="wordsearch">Caça Palavras</option>
+          <option value="crossword">Palavras Cruzadas</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Número de Colunas</label>
+        <input type="text" id="numCols" placeholder="Ex: 3" value="3">
+      </div>
+      <div class="field">
+        <label>Dificuldade</label>
+        <select id="difficulty">
+          <option value="easy">Fácil</option>
+          <option value="medium" selected>Médio</option>
+          <option value="hard">Difícil</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">📥 Fonte das Palavras</div>
+    <div class="toggle-mode">
+      <button class="active" onclick="setMode('image')" id="modeImg">🖼 Via Imagem (OCR)</button>
+      <button onclick="setMode('manual')" id="modeManual">✏️ Manual</button>
+      <button onclick="setMode('table')" id="modeTable">📋 Tabela</button>
+    </div>
+
+    <div id="imageMode">
+      <div class="paste-area" id="pasteArea"
+           onclick="document.getElementById('fileInput').click()"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(event)">
+        <div class="icon">🖼️</div>
+        <p>Clique para selecionar imagens ou arraste aqui</p>
+        <p class="hint">Suporta múltiplas imagens • OCR automático</p>
+      </div>
+      <div class="pasted-gallery" id="pastedGallery"></div>
+      <div class="ocr-preview" id="ocrPreview">
+        <div class="toolbar">
+          <span>📄 Texto extraído (OCR)</span>
+          <button class="btn-ghost" style="font-size:10px;padding:4px 8px" onclick="applyOcr()">Usar texto</button>
+        </div>
+        <div class="ocr-text" id="ocrText"></div>
+      </div>
+    </div>
+
+    <div id="manualMode" class="manual-input">
+      <textarea id="manualText" placeholder="Digite as palavras, uma por linha:&#10;GATO&#10;CACHORRO&#10;PÁSSARO&#10;..."></textarea>
+      <p class="hint">💡 Uma palavra por linha. Tab para inserir a tradução/dica.</p>
+      <button class="btn-primary" style="margin-top:8px;width:100%" onclick="importManualText()">📥 Importar Palavras</button>
+    </div>
+
+    <div class="section-title" style="margin-top:1.5rem">📝 Palavras e Imagens</div>
+    <div class="words-header">
+      <span>#</span><span>Palavra</span><span>Dica / Tradução</span>
+      <span>Imagem 1</span><span>Imagem 2</span><span></span>
+    </div>
+    <div id="wordsList"></div>
+    <button class="add-word-btn" onclick="addWord()">+ Adicionar Palavra</button>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="preview-panel">
+      <div class="section-title">👁 Pré-visualização</div>
+      <div class="preview-strip" id="previewStrip">
+        <div style="color:var(--muted);font-size:12px;width:100%;text-align:center;padding:10px">
+          Adicione palavras para pré-visualizar
+        </div>
+      </div>
+    </div>
+    <div class="output-panel">
+      <div class="output-header">
+        <div class="section-title" style="margin:0">📄 Código Gerado</div>
+        <button class="btn-ghost" style="font-size:10px" onclick="copyCode()">📋 Copiar</button>
+      </div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span>output.html</span>
+          <span id="codeStats">— linhas</span>
+        </div>
+        <div class="code-body" id="codeBody">
+          <div class="placeholder-msg">
+            <div class="big">⚡</div>
+            <div>Configure e clique em <strong>Gerar</strong><br>para criar o jogo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gen-bar">
+      <button class="gen-full-btn" onclick="generate()">⚡ Gerar Jogo Completo</button>
+      <button class="btn-download" onclick="downloadGame()">⬇️ Baixar HTML</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Gerando jogo...</div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="slotFileInput" accept="image/*" style="display:none">
+
+<script>
+// Variáveis globais
+let words = [];
+let pastedImages = [];
+let currentMode = 'image';
+let generatedCode = '';
+let slotTarget = null;
+let wordIdCounter = 0;
+
+// Função para inicializar com exemplo
+window.onload = function() {
+  try {
+    addWord({ word: 'GATO', hint: 'Cat' });
+    addWord({ word: 'CACHORRO', hint: 'Dog' });
+    addWord({ word: 'PÁSSARO', hint: 'Bird' });
+    renderWordsList();
+    renderPreview();
+    
+    // Event listeners
+    document.getElementById('slotFileInput').addEventListener('change', handleSlotFile);
+    document.getElementById('fileInput').addEventListener('click', function(e) { e.stopPropagation(); });
+    
+    // Inicializar modo
+    setMode('image');
+  } catch(e) {
+    console.error('Erro na inicialização:', e);
+    showToast('Erro ao inicializar: ' + e.message, true);
+  }
+};
+
+// Gerenciamento de modo
+function setMode(mode) {
+  currentMode = mode;
+  const modes = ['image', 'manual', 'table'];
+  modes.forEach(m => {
+    const btn = document.getElementById('mode' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
+  
+  const imageMode = document.getElementById('imageMode');
+  const manualMode = document.getElementById('manualMode');
+  
+  if (imageMode) imageMode.style.display = mode === 'image' ? 'block' : 'none';
+  if (manualMode) manualMode.style.display = mode === 'manual' ? 'block' : 'none';
+  
+  if (mode === 'table') {
+    showToast('Modo tabela: digite as palavras manualmente abaixo', false);
+  }
+}
+
+// Importar texto manual
+function importManualText() {
+  const text = document.getElementById('manualText').value;
+  if (!text.trim()) {
+    showToast('Digite palavras no campo de texto primeiro!', true);
+    return;
+  }
+  
+  const lines = text.split('\n');
+  let imported = 0;
+  
+  lines.forEach(line => {
+    line = line.trim();
+    if (line) {
+      const parts = line.split(/\t|  +/);
+      const word = parts[0].trim().toUpperCase();
+      const hint = parts[1] ? parts[1].trim() : '';
+      if (word && !words.some(w => w.word === word)) {
+        addWord({ word: word, hint: hint });
+        imported++;
+      }
+    }
+  });
+  
+  if (imported > 0) {
+    showToast(`✅ ${imported} palavras importadas!`);
+    renderWordsList();
+    renderPreview();
+  } else {
+    showToast('Nenhuma palavra válida encontrada', true);
+  }
+}
+
+// Upload de imagens
+function handleDragOver(e) {
+  e.preventDefault();
+  const area = document.getElementById('pasteArea');
+  if (area) area.classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+  const area = document.getElementById('pasteArea');
+  if (area) area.classList.remove('dragover');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const area = document.getElementById('pasteArea');
+  if (area) area.classList.remove('dragover');
+  
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  processImageFiles(files);
+}
+
+function handleFiles(e) {
+  const files = Array.from(e.target.files);
+  processImageFiles(files);
+  e.target.value = '';
+}
+
+function processImageFiles(files) {
+  if (files.length === 0) return;
+  
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const id = Date.now() + Math.random();
+      pastedImages.push({ id, dataUrl: ev.target.result, name: file.name });
+      renderPastedGallery();
+      
+      // Simular OCR
+      const ocrPreview = document.getElementById('ocrPreview');
+      const ocrText = document.getElementById('ocrText');
+      if (ocrPreview && ocrText) {
+        ocrPreview.style.display = 'block';
+        ocrText.textContent += `[${file.name}]\n(imagem carregada - clique em "Usar texto" para extrair palavras)\n\n`;
+      }
+    };
+    reader.onerror = function() {
+      showToast(`Erro ao carregar ${file.name}`, true);
+    };
+    reader.readAsDataURL(file);
+  });
+  
+  showToast(`${files.length} imagem(ns) carregada(s)!`);
+}
+
+function renderPastedGallery() {
+  const gallery = document.getElementById('pastedGallery');
+  if (!gallery) return;
+  
+  gallery.innerHTML = pastedImages.map(img => `
+    <div class="pasted-item">
+      <img src="${img.dataUrl}" alt="${img.name}">
+      <button class="remove" onclick="removePastedImg('${img.id}')">×</button>
+      <div class="status">${img.name.substring(0,12)}</div>
+    </div>
+  `).join('');
+}
+
+function removePastedImg(id) {
+  pastedImages = pastedImages.filter(i => String(i.id) !== String(id));
+  renderPastedGallery();
+}
+
+function applyOcr() {
+  const ocrText = document.getElementById('ocrText');
+  if (!ocrText) return;
+  
+  const text = ocrText.textContent;
+  const lines = text.split('\n');
+  let imported = 0;
+  
+  lines.forEach(line => {
+    line = line.trim();
+    if (line && !line.startsWith('[') && !line.startsWith('(') && line.length > 0) {
+      const parts = line.split(/\t|  +/);
+      const word = parts[0]?.trim().toUpperCase();
+      const hint = parts[1]?.trim() || '';
+      if (word && word.length > 0 && !words.some(w => w.word === word)) {
+        addWord({ word: word, hint: hint });
+        imported++;
+      }
+    }
+  });
+  
+  if (imported > 0) {
+    renderWordsList();
+    renderPreview();
+    showToast(`${imported} palavras extraídas e adicionadas!`);
+  } else {
+    showToast('Nenhuma palavra encontrada no texto. Adicione manualmente.', true);
+  }
+}
+
+// Gerenciamento de palavras
+function addWord(data = {}) {
+  words.push({ 
+    id: ++wordIdCounter, 
+    word: data.word || '', 
+    hint: data.hint || '', 
+    img1: data.img1 || null, 
+    img2: data.img2 || null 
+  });
+  renderWordsList();
+  renderPreview();
+}
+
+function removeWord(id) {
+  words = words.filter(w => w.id !== id);
+  renderWordsList();
+  renderPreview();
+}
+
+function updateWord(id, field, value) {
+  const w = words.find(w => w.id === id);
+  if (w) w[field] = value;
+  renderPreview();
+}
+
+function renderWordsList() {
+  const container = document.getElementById('wordsList');
+  if (!container) return;
+  
+  container.innerHTML = words.map((w, i) => `
+    <div class="word-row" id="row-${w.id}">
+      <div class="word-num">${String(i+1).padStart(2,'0')}</div>
+      <input type="text" value="${escHtml(w.word)}" placeholder="Palavra..."
+             onchange="updateWord(${w.id},'word',this.value)" oninput="updateWord(${w.id},'word',this.value)">
+      <input type="text" value="${escHtml(w.hint)}" placeholder="Dica/Tradução..."
+             onchange="updateWord(${w.id},'hint',this.value)" oninput="updateWord(${w.id},'hint',this.value)">
+      <div class="img-slot ${w.img1 ? 'has-img' : ''}" onclick="openSlot(${w.id},1)">
+        ${w.img1 ? `<img src="${w.img1}"><button class="remove-img" onclick="removeSlotImg(event,${w.id},1)">×</button><div class="label">Img 1</div>` : '🖼 Img 1'}
+      </div>
+      <div class="img-slot ${w.img2 ? 'has-img' : ''}" onclick="openSlot(${w.id},2)">
+        ${w.img2 ? `<img src="${w.img2}"><button class="remove-img" onclick="removeSlotImg(event,${w.id},2)">×</button><div class="label">Img 2</div>` : '🖼 Img 2'}
+      </div>
+      <button class="del-btn" onclick="removeWord(${w.id})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function openSlot(wordId, slot) {
+  slotTarget = { wordId, slot };
+  const input = document.getElementById('slotFileInput');
+  if (input) input.click();
+}
+
+function handleSlotFile(e) {
+  const file = e.target.files[0];
+  if (!file || !slotTarget) return;
+  
+  if (!file.type.startsWith('image/')) {
+    showToast('Por favor, selecione um arquivo de imagem', true);
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const w = words.find(w => w.id === slotTarget.wordId);
+    if (w) {
+      if (slotTarget.slot === 1) w.img1 = ev.target.result;
+      else w.img2 = ev.target.result;
+      renderWordsList();
+      renderPreview();
+      showToast('Imagem adicionada!');
+    }
+    slotTarget = null;
+  };
+  reader.onerror = function() {
+    showToast
