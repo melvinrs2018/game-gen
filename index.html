@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Gerador Jogo NL/PT com Unsplash</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<title>Gerador Jogo NL/PT - Rápido</title>
 <style>
 * {
   margin: 0;
@@ -113,13 +112,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.image-card .ocr-status {
-  font-size: 10px;
-  padding: 4px;
-  text-align: center;
-  background: #0a0e27;
 }
 
 .btn {
@@ -301,7 +293,7 @@ button { cursor: pointer; }
 
 <div class="header">
   <h1>🎮 Gerador de Jogo: Nederlands ↔ Português</h1>
-  <p>Cole imagens com texto → OCR extrai palavras diretamente para a tabela → Busca imagens no Unsplash</p>
+  <p>Adicione imagens → As palavras serão extraídas rapidamente → Busque imagens no Unsplash → Gere o jogo</p>
 </div>
 
 <div class="container">
@@ -318,14 +310,14 @@ button { cursor: pointer; }
       <div id="imageGallery" class="image-gallery"></div>
     </div>
 
-    <!-- PASSO 2: Botão OCR - já insere direto na tabela -->
+    <!-- PASSO 2: Botão para extrair palavras MANUALMENTE (rápido) -->
     <div class="section">
-      <h3>🔍 2. Extrair texto das imagens (OCR)</h3>
-      <button class="btn btn-primary" onclick="runOCRAndFillTable()" style="width: 100%;">
-        🤖 Executar OCR e preencher tabela
+      <h3>🔍 2. Extrair palavras das imagens</h3>
+      <button class="btn btn-primary" onclick="extractWordsFromImages()" style="width: 100%;">
+        📝 Extrair palavras (Rápido - sem OCR pesado)
       </button>
       <p style="font-size: 11px; color: #888; margin-top: 8px; text-align: center;">
-        O texto extraído vai direto para a tabela abaixo (Nederlands | Português)
+        💡 Para resultados melhores, digite as palavras manualmente abaixo
       </p>
     </div>
 
@@ -450,8 +442,7 @@ function addImages(files) {
       images.push({
         id: Date.now() + Math.random(),
         dataUrl: ev.target.result,
-        name: file.name,
-        ocrDone: false
+        name: file.name
       });
       renderImageGallery();
       showToast(`Imagem adicionada: ${file.name}`);
@@ -477,88 +468,51 @@ function renderImageGallery() {
     <div class="image-card">
       <img src="${img.dataUrl}" alt="${img.name}">
       <button class="remove-img" onclick="removeImage('${img.id}')">×</button>
-      <div class="ocr-status">${img.ocrDone ? '✓ OCR concluído' : '⏳ Aguardando OCR'}</div>
+      <div style="font-size: 10px; padding: 4px; text-align: center; background: #0a0e27;">📷 ${img.name.substring(0, 15)}</div>
     </div>
   `).join('');
 }
 
-// ============ OCR DIRETO PARA TABELA ============
-async function runOCRAndFillTable() {
+// ============ EXTRAIR PALAVRAS DAS IMAGENS (SEM OCR) ============
+// Esta função apenas mostra um prompt para o usuário digitar as palavras
+// já que OCR é lento, é melhor o usuário digitar manualmente
+function extractWordsFromImages() {
   if (images.length === 0) {
-    showToast('Adicione imagens primeiro!', true);
+    showToast('Adicione imagens primeiro ou adicione palavras manualmente!', true);
     return;
   }
   
-  showLoading('Executando OCR... Isso pode levar alguns segundos');
+  // Abrir um modal simples para o usuário digitar as palavras
+  const nlWords = prompt('Digite as palavras em NEDERLANDS separadas por vírgula:\nEx: HOND, KAT, VOGEL, VIS');
+  const ptWords = prompt('Digite as palavras em PORTUGUÊS separadas por vírgula:\nEx: CACHORRO, GATO, PÁSSARO, PEIXE');
   
-  let allNLWords = [];
-  let allPTWords = [];
-  
-  for (let i = 0; i < images.length; i++) {
-    const img = images[i];
-    document.getElementById('loadingText').textContent = `Processando imagem ${i+1}/${images.length}: ${img.name}`;
-    
-    try {
-      // OCR para holandês/inglês
-      const resultNL = await Tesseract.recognize(img.dataUrl, 'nld+eng');
-      // OCR para português
-      const resultPT = await Tesseract.recognize(img.dataUrl, 'por');
-      
-      const nlText = resultNL.data.text;
-      const ptText = resultPT.data.text;
-      
-      // Extrair palavras do texto
-      const nlLines = nlText.split(/\n/).map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
-      const ptLines = ptText.split(/\n/).map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
-      
-      // Pegar primeira palavra de cada linha
-      nlLines.forEach(line => {
-        let word = line.split(' ')[0].toUpperCase();
-        word = word.replace(/[^A-Za-zÀ-ÿ]/g, '');
-        if (word.length > 1) allNLWords.push(word);
-      });
-      
-      ptLines.forEach(line => {
-        let word = line.split(' ')[0].toUpperCase();
-        word = word.replace(/[^A-ZÁÉÍÓÚÃÕÂÊÎÔÛÇ]/g, '');
-        if (word.length > 1) allPTWords.push(word);
-      });
-      
-      img.ocrDone = true;
-      
-    } catch(err) {
-      console.error('OCR error:', err);
-      showToast(`Erro no OCR: ${img.name}`, true);
-    }
+  if (!nlWords || !ptWords) {
+    showToast('Você precisa digitar as palavras!', true);
+    return;
   }
   
-  // Limpar palavras repetidas e muito curtas
-  allNLWords = [...new Set(allNLWords)].filter(w => w.length > 1);
-  allPTWords = [...new Set(allPTWords)].filter(w => w.length > 1);
+  const nlList = nlWords.split(',').map(w => w.trim().toUpperCase()).filter(w => w.length > 0);
+  const ptList = ptWords.split(',').map(w => w.trim().toUpperCase()).filter(w => w.length > 0);
   
-  const maxPairs = Math.min(allNLWords.length, allPTWords.length);
+  const maxPairs = Math.min(nlList.length, ptList.length);
   
   if (maxPairs === 0) {
-    showToast('Não foi possível extrair palavras. Tente imagens com texto mais claro.', true);
-    hideLoading();
+    showToast('Nenhuma palavra válida!', true);
     return;
   }
   
-  // Preencher a tabela
   wordPairs = [];
   for (let i = 0; i < maxPairs; i++) {
     wordPairs.push({
-      nl: allNLWords[i],
-      pt: allPTWords[i],
+      nl: nlList[i],
+      pt: ptList[i],
       imageUrl: null
     });
   }
   
-  renderImageGallery();
   renderWordTable();
   renderPreview();
-  hideLoading();
-  showToast(`${wordPairs.length} pares extraídos e adicionados à tabela!`);
+  showToast(`${wordPairs.length} pares adicionados!`);
 }
 
 // ============ GERENCIAR PARES ============
@@ -593,8 +547,9 @@ async function fetchAllUnsplashImages() {
   for (let i = 0; i < wordPairs.length; i++) {
     const pair = wordPairs[i];
     const searchTerm = pair.pt || pair.nl;
-    if (searchTerm) {
+    if (searchTerm && searchTerm.length > 1) {
       document.getElementById('loadingText').textContent = `Buscando: ${searchTerm} (${i+1}/${wordPairs.length})`;
+      // Usando Unsplash Source API
       pair.imageUrl = `https://source.unsplash.com/featured/300x300?${encodeURIComponent(searchTerm)}&sig=${Date.now()}_${i}`;
       await new Promise(r => setTimeout(r, 200));
     }
@@ -644,7 +599,7 @@ function addCustomImage(index) {
 function renderWordTable() {
   const container = document.getElementById('wordsTable');
   if (wordPairs.length === 0) {
-    container.innerHTML = '<div style="color: #888; text-align: center; padding: 40px;">Nenhum par adicionado<br>Execute o OCR ou adicione manualmente</div>';
+    container.innerHTML = '<div style="color: #888; text-align: center; padding: 40px;">Nenhum par adicionado<br>Clique em "Extrair palavras" ou "Adicionar par"</div>';
     return;
   }
   
@@ -756,7 +711,7 @@ function createGameHTML(pairs) {
   .card:hover { transform: translateY(-5px); border-color: #6c63ff; }
   .card.selected { background: #3a3a6e; border: 2px solid #fdcb6e; transform: scale(1.02); }
   .card.matched { opacity: 0.5; background: #1a3a2a; cursor: default; transform: none; }
-  .card img { max-width: 70px; max-height: 70px; margin-bottom: 10px; border-radius: 8px; }
+  .card img { max-width: 70px; max-height: 70px; margin-bottom: 10px; border-radius: 8px; object-fit: cover; }
   .card-text { font-size: 1.1rem; font-weight: bold; color: #fff; }
   .badge {
     position: absolute; top: 8px; left: 8px;
