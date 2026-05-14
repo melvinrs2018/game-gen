@@ -79,15 +79,30 @@ h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
   </div>
 
   <div class="section">
-    <h2>2. Extrair palavras com IA (visão)</h2>
+    <h2>2. Chave Pexels (grátis em pexels.com/api)</h2>
+    <input id="pexelsKey" type="text" placeholder="6V2jycJj7IKDWPgduqBqYEVY9BvbZiNMagupmAxCLFzj2d8R9YHCmoiv" style="width:100%;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px;color:#e6edf3;font-size:13px;font-family:'DM Sans',sans-serif;">
+  </div>
+
+  <div class="section">
+    <h2>3. Digite ou cole as palavras manualmente</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:11px;color:#58a6ff;font-weight:600;margin-bottom:6px">🇳🇱 NEDERLANDS (uma por linha)</div>
+        <textarea id="nlInput" placeholder="hond&#10;kat&#10;vogel&#10;vis" style="width:100%;height:120px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px;color:#e6edf3;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical"></textarea>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#3fb950;font-weight:600;margin-bottom:6px">🇵🇹 PORTUGUÊS (uma por linha)</div>
+        <textarea id="ptInput" placeholder="cachorro&#10;gato&#10;pássaro&#10;peixe" style="width:100%;height:120px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px;color:#e6edf3;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical"></textarea>
+      </div>
+    </div>
     <div id="statusBar" class="status-bar" style="display:none"></div>
-    <button class="btn btn-ai" id="extractBtn" onclick="extractWords()" disabled>
-      🤖 Extrair NL + PT automaticamente com IA
+    <button class="btn btn-ai" onclick="importFromText()" style="background:linear-gradient(135deg,#1f6feb,#1158c7)">
+      ✅ Importar palavras
     </button>
   </div>
 
   <div class="section">
-    <h2>3. Pares de palavras</h2>
+    <h2>4. Pares de palavras</h2>
     <div class="pairs-header">
       <span>🇳🇱 Nederlands</span>
       <span>🇵🇹 Português</span>
@@ -134,7 +149,6 @@ let images=[], pairs=[];
 const dropZone=document.getElementById('dropZone');
 const fileInput=document.getElementById('fileInput');
 const imgGrid=document.getElementById('imgGrid');
-const extractBtn=document.getElementById('extractBtn');
 const statusBar=document.getElementById('statusBar');
 const pairsArea=document.getElementById('pairsArea');
 const previewGrid=document.getElementById('previewGrid');
@@ -158,8 +172,7 @@ function handleFiles(files){
 }
 
 function renderImgs(){
-  if(!images.length){imgGrid.innerHTML='';extractBtn.disabled=true;return;}
-  extractBtn.disabled=false;
+  if(!images.length){imgGrid.innerHTML='';return;}
   imgGrid.innerHTML=images.map(img=>`
     <div class="img-thumb">
       <img src="${img.dataUrl}">
@@ -176,49 +189,21 @@ function showStatus(msg,type){
   statusBar.innerHTML=type==='loading'?`<span class="spin"></span>${msg}`:msg;
 }
 
-async function extractWords(){
-  if(!images.length){showStatus('Adicione imagens primeiro!','err');return;}
-  extractBtn.disabled=true;
-  showStatus('Analisando imagens com IA...','loading');
-
-  const imageContents=images.map(img=>({
-    type:'image',
-    source:{type:'base64',media_type:img.dataUrl.split(';')[0].split(':')[1],data:img.dataUrl.split(',')[1]}
-  }));
-
-  const prompt=`Analyze these vocabulary/flashcard images carefully.
-Extract ALL Dutch (Nederlands) words and their Portuguese (Português) translations.
-Return ONLY valid JSON, no markdown, no extra text:
-{"pairs":[{"nl":"DUTCH_WORD","pt":"PORTUGUESE_WORD"},...]}
-Rules:
-- Extract every visible NL/PT word pair
-- NL words are Dutch, PT words are Portuguese/Brazilian Portuguese
-- If unsure of a translation, still include the NL word with best guess PT
-- Return only the JSON object`;
-
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:[...imageContents,{type:'text',text:prompt}]}]
-      })
-    });
-    const data=await resp.json();
-    if(data.error)throw new Error(data.error.message);
-    const text=data.content.map(c=>c.text||'').join('');
-    const clean=text.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(clean);
-    if(!parsed.pairs||!parsed.pairs.length)throw new Error('Nenhum par encontrado na imagem');
-    pairs=parsed.pairs.map(p=>({nl:(p.nl||'').toUpperCase(),pt:(p.pt||'').toUpperCase(),imageUrl:null}));
-    renderPairs();renderPreview();
-    showStatus(`✅ ${pairs.length} pares extraídos com sucesso!`,'ok');
-  }catch(e){
-    showStatus('❌ Erro: '+e.message,'err');
-  }finally{extractBtn.disabled=false;}
+function importFromText(){
+  const nlRaw=document.getElementById('nlInput').value.trim();
+  const ptRaw=document.getElementById('ptInput').value.trim();
+  if(!nlRaw||!ptRaw){showStatus('Digite palavras nos dois campos!','err');return;}
+  const nlList=nlRaw.split('\n').map(w=>w.trim().toUpperCase()).filter(w=>w);
+  const ptList=ptRaw.split('\n').map(w=>w.trim().toUpperCase()).filter(w=>w);
+  const max=Math.min(nlList.length,ptList.length);
+  if(!max){showStatus('Nenhuma palavra válida encontrada!','err');return;}
+  pairs=[];
+  for(let i=0;i<max;i++) pairs.push({nl:nlList[i],pt:ptList[i],imageUrl:null});
+  renderPairs();renderPreview();
+  showStatus(`✅ ${max} pares importados!`,'ok');
 }
+
+async function extractWords(){}
 
 function addPair(){pairs.push({nl:'',pt:'',imageUrl:null});renderPairs();}
 function removePair(i){pairs.splice(i,1);renderPairs();renderPreview();}
@@ -254,23 +239,37 @@ function renderPreview(){
 }
 
 async function fetchAllImages(){
+  const key=document.getElementById('pexelsKey').value.trim();
+  if(!key){showStatus('Cole sua chave Pexels no campo acima!','err');return;}
   const valid=pairs.filter(p=>p.nl||p.pt);
-  if(!valid.length){showStatus('Adicione pares primeiro!','err');statusBar.style.display='flex';return;}
-  showStatus(`Buscando imagens para ${valid.length} palavras...`,'loading');
+  if(!valid.length){showStatus('Adicione pares primeiro!','err');return;}
+  showStatus(`Buscando imagens no Pexels para ${valid.length} palavras...`,'loading');
   for(let i=0;i<pairs.length;i++){
-    const p=pairs[i];const term=p.pt||p.nl;
-    if(term)p.imageUrl=`https://source.unsplash.com/featured/300x300?${encodeURIComponent(term)}&sig=${Date.now()}_${i}`;
-    await new Promise(r=>setTimeout(r,150));
+    const p=pairs[i];
+    const term=p.pt||p.nl;
+    if(!term)continue;
+    try{
+      const r=await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=1&orientation=square`,{headers:{Authorization:key}});
+      const d=await r.json();
+      if(d.photos&&d.photos.length) p.imageUrl=d.photos[0].src.small;
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,300));
   }
   renderPairs();renderPreview();
-  showStatus(`✅ Imagens adicionadas!`,'ok');
+  showStatus(`✅ Imagens do Pexels adicionadas!`,'ok');
 }
 
-function fetchOne(i){
+async function fetchOne(i){
+  const key=document.getElementById('pexelsKey').value.trim();
+  if(!key){showStatus('Cole sua chave Pexels no campo acima!','err');return;}
   const p=pairs[i];const term=p.pt||p.nl;
-  if(!term){showStatus('Digite uma palavra primeiro!','err');statusBar.style.display='flex';return;}
-  p.imageUrl=`https://source.unsplash.com/featured/300x300?${encodeURIComponent(term)}&sig=${Date.now()}`;
-  renderPairs();renderPreview();
+  if(!term){showStatus('Digite uma palavra primeiro!','err');return;}
+  try{
+    const r=await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=1&orientation=square`,{headers:{Authorization:key}});
+    const d=await r.json();
+    if(d.photos&&d.photos.length){p.imageUrl=d.photos[0].src.small;renderPairs();renderPreview();showStatus('✅ Imagem encontrada!','ok');}
+    else showStatus('Nenhuma imagem encontrada para: '+term,'err');
+  }catch(e){showStatus('Erro Pexels: '+e.message,'err');}
 }
 
 function customImg(i){
@@ -287,7 +286,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 function generateGame(){
   const valid=pairs.filter(p=>p.nl&&p.pt);
-  if(!valid.length){showStatus('Adicione pelo menos um par!','err');statusBar.style.display='flex';return;}
+  if(!valid.length){showStatus('Adicione pelo menos um par!','err');return;}
   const html=buildGameHTML(valid);
   codePre.textContent=html;
   showStatus(`✅ Jogo gerado com ${valid.length} pares!`,'ok');
@@ -382,13 +381,13 @@ init();
 
 function copyCode(){
   const t=codePre.textContent;
-  if(t.startsWith('Clique')){showStatus('Gere o jogo primeiro!','err');statusBar.style.display='flex';return;}
+  if(t.startsWith('Clique')){showStatus('Gere o jogo primeiro!','err');return;}
   navigator.clipboard.writeText(t).then(()=>showStatus('✅ Copiado!','ok'));
 }
 
 function downloadGame(){
   const t=codePre.textContent;
-  if(t.startsWith('Clique')){showStatus('Gere o jogo primeiro!','err');statusBar.style.display='flex';return;}
+  if(t.startsWith('Clique')){showStatus('Gere o jogo primeiro!','err');return;}
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([t],{type:'text/html'}));
   a.download='jogo_nl_pt.html';a.click();
