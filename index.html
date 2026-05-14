@@ -201,13 +201,14 @@ body {
 }
 .word-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 80px;
+  grid-template-columns: 1fr 1fr 80px 40px;
   gap: 8px;
   padding: 8px;
   background: var(--surface);
   margin-bottom: 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
+  align-items: center;
 }
 .word-row input {
   padding: 6px 10px;
@@ -229,6 +230,7 @@ body {
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border);
 }
 .word-row .img-preview img {
   width: 100%;
@@ -336,21 +338,17 @@ body {
 <div class="main">
   <div class="left-panel">
     <div class="section-title">📸 1. COLE AS IMAGENS</div>
-    <div class="paste-area" id="pasteArea"
-         onclick="document.getElementById('fileInput').click()"
-         ondragover="handleDragOver(event)"
-         ondragleave="handleDragLeave(event)"
-         ondrop="handleDrop(event)">
-      <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+    <div class="paste-area" id="pasteArea">
       <div style="font-size: 3rem;">🖼️</div>
-      <p><strong>Clique ou arraste imagens aqui</strong></p>
-      <p style="font-size: 12px; color: var(--muted);">Suporta: PNG, JPG, GIF • Use Ctrl+V para colar</p>
+      <p><strong>Clique aqui para selecionar imagens</strong></p>
+      <p style="font-size: 12px; color: var(--muted);">Ou arraste imagens aqui • Use Ctrl+V para colar</p>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
     </div>
 
     <div id="imageGallery" class="image-gallery"></div>
 
     <div class="section-title">🔍 2. EXTRAIR TEXTO (OCR)</div>
-    <button class="btn-primary" onclick="ocrAllImages()" style="width: 100%; margin-bottom: 1rem;">
+    <button class="btn-primary" onclick="ocrAllImages()" style="width: 100%; margin-bottom: 1rem;" id="ocrBtn">
       🤖 Executar OCR em Todas as Imagens
     </button>
 
@@ -365,7 +363,7 @@ body {
           <textarea id="otherText" placeholder="Texto no outro idioma aparecerá aqui..."></textarea>
         </div>
       </div>
-      <button class="btn-secondary" onclick="extractPairs()" style="width: 100%;">
+      <button class="btn-secondary" onclick="extractPairs()" style="width: 100%; margin-top: 8px;">
         📝 Extrair Pares Palavra ↔ Tradução
       </button>
     </div>
@@ -415,8 +413,65 @@ let wordPairs = []; // { portuguese, translation, image }
 
 // Inicialização
 window.onload = function() {
-  // Listener para colar imagens (Ctrl+V)
-  document.addEventListener('paste', handlePaste);
+  console.log('Inicializando...');
+  
+  // Configurar área de upload
+  const pasteArea = document.getElementById('pasteArea');
+  const fileInput = document.getElementById('fileInput');
+  
+  // Clique para selecionar arquivos
+  pasteArea.onclick = function() {
+    fileInput.click();
+  };
+  
+  // Seleção de arquivos
+  fileInput.onchange = function(e) {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      addImages(files);
+      fileInput.value = ''; // Limpar para permitir selecionar os mesmos arquivos novamente
+    }
+  };
+  
+  // Drag and drop
+  pasteArea.ondragover = function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+  };
+  
+  pasteArea.ondragleave = function(e) {
+    this.classList.remove('dragover');
+  };
+  
+  pasteArea.ondrop = function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      addImages(files);
+    }
+  };
+  
+  // Colar imagens (Ctrl+V)
+  document.addEventListener('paste', function(e) {
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+    
+    if (imageItems.length > 0) {
+      e.preventDefault();
+      const files = [];
+      imageItems.forEach(item => {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      });
+      if (files.length > 0) {
+        addImages(files);
+        showToast(`${files.length} imagem(ns) colada(s)!`);
+      }
+    }
+  });
+  
+  // Adicionar par inicial
   addEmptyPair();
 };
 
@@ -436,40 +491,10 @@ function hideLoading() {
   document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-// Gerenciamento de imagens
-function handleDragOver(e) {
-  e.preventDefault();
-  document.getElementById('pasteArea').classList.add('dragover');
-}
-
-function handleDragLeave(e) {
-  document.getElementById('pasteArea').classList.remove('dragover');
-}
-
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('pasteArea').classList.remove('dragover');
-  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  addImages(files);
-}
-
-function handlePaste(e) {
-  const items = Array.from(e.clipboardData.items);
-  const imageItems = items.filter(item => item.type.startsWith('image/'));
-  
-  if (imageItems.length > 0) {
-    e.preventDefault();
-    const files = [];
-    imageItems.forEach(item => {
-      const file = item.getAsFile();
-      if (file) files.push(file);
-    });
-    addImages(files);
-    showToast(`${files.length} imagem(ns) colada(s)!`);
-  }
-}
-
+// Adicionar imagens
 function addImages(files) {
+  if (!files || files.length === 0) return;
+  
   files.forEach(file => {
     const reader = new FileReader();
     reader.onload = function(ev) {
@@ -480,6 +505,10 @@ function addImages(files) {
         ocrText: null
       });
       renderImageGallery();
+      showToast(`Imagem adicionada: ${file.name}`);
+    };
+    reader.onerror = function() {
+      showToast(`Erro ao carregar ${file.name}`, true);
     };
     reader.readAsDataURL(file);
   });
@@ -492,6 +521,8 @@ function removeImage(id) {
 
 function renderImageGallery() {
   const gallery = document.getElementById('imageGallery');
+  if (!gallery) return;
+  
   if (images.length === 0) {
     gallery.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 1rem;">Nenhuma imagem adicionada</div>';
     return;
@@ -519,18 +550,12 @@ async function ocrAllImages() {
   
   for (let i = 0; i < images.length; i++) {
     const img = images[i];
-    document.getElementById('loadingText').textContent = `Processando imagem ${i+1}/${images.length}...`;
+    document.getElementById('loadingText').textContent = `Processando imagem ${i+1}/${images.length}: ${img.name}`;
     
     try {
-      // Tentar detectar português primeiro
-      const resultPt = await Tesseract.recognize(img.dataUrl, 'por', {
-        logger: m => console.log(m)
-      });
-      
-      // Detectar inglês como segundo idioma
-      const resultEn = await Tesseract.recognize(img.dataUrl, 'eng', {
-        logger: m => console.log(m)
-      });
+      // Tentar detectar português
+      const resultPt = await Tesseract.recognize(img.dataUrl, 'por');
+      const resultEn = await Tesseract.recognize(img.dataUrl, 'eng');
       
       const ptText = resultPt.data.text;
       const enText = resultEn.data.text;
@@ -538,6 +563,8 @@ async function ocrAllImages() {
       img.ocrText = { portuguese: ptText, other: enText };
       allPortuguese.push(ptText);
       allOther.push(enText);
+      
+      showToast(`OCR completo: ${img.name}`);
       
     } catch(err) {
       console.error('Erro no OCR:', err);
@@ -567,11 +594,13 @@ function extractPairs() {
     return;
   }
   
-  // Dividir em linhas e limpar
-  const ptLines = portugueseText.split(/\n|---/).map(l => l.trim()).filter(l => l.length > 0);
-  const otherLines = otherText.split(/\n|---/).map(l => l.trim()).filter(l => l.length > 0);
+  // Dividir em linhas
+  let ptLines = portugueseText.split(/\n|---/);
+  let otherLines = otherText.split(/\n|---/);
   
-  // Encontrar correspondências (assumindo que estão na mesma ordem ou相似的)
+  ptLines = ptLines.map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
+  otherLines = otherLines.map(l => l.trim()).filter(l => l.length > 0 && l.length < 50);
+  
   const maxPairs = Math.min(ptLines.length, otherLines.length);
   
   if (maxPairs === 0) {
@@ -583,12 +612,11 @@ function extractPairs() {
   wordPairs = [];
   
   for (let i = 0; i < maxPairs && i < 20; i++) {
-    // Pular linhas muito curtas
-    if (ptLines[i].length < 2 || otherLines[i].length < 2) continue;
-    
-    // Limpar caracteres especiais e números
     let ptWord = ptLines[i].replace(/[0-9]/g, '').split(' ')[0].toUpperCase();
     let otherWord = otherLines[i].replace(/[0-9]/g, '').split(' ')[0].toUpperCase();
+    
+    ptWord = ptWord.replace(/[^A-ZÁÉÍÓÚÃÕÂÊÎÔÛÇ]/g, '');
+    otherWord = otherWord.replace(/[^A-Z]/g, '');
     
     if (ptWord.length > 1 && otherWord.length > 1) {
       wordPairs.push({
@@ -622,9 +650,6 @@ function addEmptyPair() {
 function updatePair(index, field, value) {
   wordPairs[index][field] = value;
   renderPreview();
-  if (field === 'portuguese' || field === 'translation') {
-    // Auto-salvar
-  }
 }
 
 function removePair(index) {
@@ -656,6 +681,8 @@ function addImageToPair(index) {
 
 function renderWordsTable() {
   const container = document.getElementById('wordsTable');
+  if (!container) return;
+  
   if (wordPairs.length === 0) {
     container.innerHTML = '<div style="color: var(--muted); text-align: center;">Nenhum par adicionado</div>';
     return;
@@ -670,7 +697,7 @@ function renderWordsTable() {
              value="${escHtml(pair.translation)}"
              onchange="updatePair(${idx}, 'translation', this.value)">
       <div class="img-preview" onclick="addImageToPair(${idx})">
-        ${pair.image ? `<img src="${pair.image}" alt="imagem">` : '📷 Imagem'}
+        ${pair.image ? `<img src="${pair.image}" alt="imagem">` : '📷'}
       </div>
       <button class="btn-secondary" onclick="removePair(${idx})" style="width: auto; padding: 4px 8px;">🗑️</button>
     </div>
@@ -679,6 +706,8 @@ function renderWordsTable() {
 
 function renderPreview() {
   const strip = document.getElementById('previewStrip');
+  if (!strip) return;
+  
   const validPairs = wordPairs.filter(p => p.portuguese && p.translation);
   
   if (validPairs.length === 0) {
@@ -694,7 +723,7 @@ function renderPreview() {
   `).join('');
 }
 
-// Gerar jogo de associação
+// Gerar jogo
 function generateGame() {
   const validPairs = wordPairs.filter(p => p.portuguese && p.translation);
   
@@ -705,54 +734,48 @@ function generateGame() {
   
   showLoading('Gerando jogo HTML...');
   
-  // Embaralhar para o jogo
-  const shuffledPairs = [...validPairs];
-  for (let i = shuffledPairs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffledPairs[i], shuffledPairs[j]] = [shuffledPairs[j], shuffledPairs[i]];
-  }
-  
-  const gameHTML = generateMatchingGame(shuffledPairs);
-  
-  document.getElementById('codeContent').textContent = gameHTML;
-  hideLoading();
-  showToast('Jogo gerado com sucesso!');
+  setTimeout(() => {
+    const gameHTML = generateMatchingGame(validPairs);
+    document.getElementById('codeContent').textContent = gameHTML;
+    hideLoading();
+    showToast('Jogo gerado com sucesso!');
+  }, 100);
 }
 
 function generateMatchingGame(pairs) {
-  const title = 'Jogo de Associação';
+  const title = document.getElementById('gameTitle')?.value || 'Jogo de Associação';
   
-  // Criar cards para português e traduções separados
-  const portugueseCards = pairs.map((pair, idx) => ({
-    id: `pt_${idx}`,
-    text: pair.portuguese,
-    pairId: idx,
-    image: pair.image,
-    type: 'pt'
-  }));
+  // Criar cards
+  const cards = [];
+  pairs.forEach((pair, idx) => {
+    cards.push({
+      id: `pt_${idx}`,
+      text: pair.portuguese,
+      pairId: idx,
+      image: pair.image,
+      type: 'pt'
+    });
+    cards.push({
+      id: `tr_${idx}`,
+      text: pair.translation,
+      pairId: idx,
+      image: null,
+      type: 'tr'
+    });
+  });
   
-  const translationCards = pairs.map((pair, idx) => ({
-    id: `tr_${idx}`,
-    text: pair.translation,
-    pairId: idx,
-    type: 'tr'
-  }));
-  
-  const allCards = [...portugueseCards, ...translationCards];
   // Embaralhar
-  for (let i = allCards.length - 1; i > 0; i--) {
+  for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [allCards[i], allCards[j]] = [allCards[j], allCards[i]];
+    [cards[i], cards[j]] = [cards[j], cards[i]];
   }
-  
-  const cardsJSON = JSON.stringify(allCards);
   
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title}</title>
+<title>${escHtml(title)}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -761,21 +784,9 @@ function generateMatchingGame(pairs) {
     min-height: 100vh;
     padding: 20px;
   }
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  h1 {
-    text-align: center;
-    color: white;
-    margin-bottom: 10px;
-    font-size: 2rem;
-  }
-  .subtitle {
-    text-align: center;
-    color: rgba(255,255,255,0.9);
-    margin-bottom: 30px;
-  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { text-align: center; color: white; margin-bottom: 10px; font-size: 2rem; }
+  .subtitle { text-align: center; color: rgba(255,255,255,0.9); margin-bottom: 30px; }
   .game-board {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -790,42 +801,17 @@ function generateMatchingGame(pairs) {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    position: relative;
     min-height: 150px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
   }
-  .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-  }
-  .card.selected {
-    background: #ffeaa7;
-    transform: scale(1.02);
-    border: 3px solid #fdcb6e;
-  }
-  .card.matched {
-    opacity: 0.5;
-    background: #55efc4;
-    cursor: default;
-    transform: none;
-  }
-  .card.matched:hover {
-    transform: none;
-  }
-  .card img {
-    max-width: 80px;
-    max-height: 80px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-  }
-  .card-text {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #2d3436;
-  }
+  .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+  .card.selected { background: #ffeaa7; transform: scale(1.02); border: 3px solid #fdcb6e; }
+  .card.matched { opacity: 0.5; background: #55efc4; cursor: default; transform: none; }
+  .card img { max-width: 80px; max-height: 80px; margin-bottom: 10px; border-radius: 8px; }
+  .card-text { font-size: 1.2rem; font-weight: bold; color: #2d3436; }
   .score {
     text-align: center;
     font-size: 1.2rem;
@@ -844,33 +830,15 @@ function generateMatchingGame(pairs) {
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s;
     font-weight: bold;
   }
-  .btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-  }
-  .victory {
-    text-align: center;
-    font-size: 1.5rem;
-    color: #fdcb6e;
-    margin-top: 20px;
-    animation: bounce 0.5s ease;
-  }
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  @media (max-width: 768px) {
-    .game-board { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-    .card-text { font-size: 1rem; }
-  }
+  .btn:hover { transform: scale(1.05); }
+  .victory { text-align: center; font-size: 1.5rem; color: #fdcb6e; margin-top: 20px; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>🎮 ${title}</h1>
+  <h1>🎮 ${escHtml(title)}</h1>
   <div class="subtitle">Encontre os pares correspondentes</div>
   <div class="game-board" id="gameBoard"></div>
   <div class="score" id="score">Pares encontrados: 0 / ${pairs.length}</div>
@@ -879,15 +847,14 @@ function generateMatchingGame(pairs) {
 </div>
 
 <script>
-  const cardsData = ${cardsJSON};
+  const cardsData = ${JSON.stringify(cards)};
   let currentCards = [];
   let selectedCard = null;
   let matchedPairs = 0;
   let lockBoard = false;
   
   function initGame() {
-    currentCards = [...cardsData];
-    // Embaralhar
+    currentCards = JSON.parse(JSON.stringify(cardsData));
     for (let i = currentCards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]];
@@ -921,13 +888,10 @@ function generateMatchingGame(pairs) {
     if (card.matched) return;
     
     if (!selectedCard) {
-      // Primeira seleção
       selectedCard = { index, pairId: card.pairId, type: card.type };
       renderBoard();
     } else {
-      // Segunda seleção
       if (selectedCard.index === index) {
-        // Deselecionar
         selectedCard = null;
         renderBoard();
         return;
@@ -937,19 +901,17 @@ function generateMatchingGame(pairs) {
       const secondCard = currentCards[index];
       
       if (firstCard.pairId === secondCard.pairId && firstCard.type !== secondCard.type) {
-        // Par correto!
         firstCard.matched = true;
         secondCard.matched = true;
         matchedPairs++;
         selectedCard = null;
         renderBoard();
-        updateScore();
+        document.getElementById('score').innerHTML = \`Pares encontrados: \${matchedPairs} / ${pairs.length}\`;
         
         if (matchedPairs === ${pairs.length}) {
           document.getElementById('victory').innerHTML = '🎉 PARABÉNS! VOCÊ COMPLETOU O JOGO! 🎉';
         }
       } else {
-        // Par errado
         lockBoard = true;
         const wrongFirst = selectedCard.index;
         const wrongSecond = index;
@@ -964,16 +926,10 @@ function generateMatchingGame(pairs) {
     }
   }
   
-  function updateScore() {
-    document.getElementById('score').innerHTML = \`Pares encontrados: \${matchedPairs} / ${pairs.length}\`;
-  }
-  
-  function resetGame() {
-    initGame();
-  }
+  function resetGame() { initGame(); }
   
   initGame();
-</script>
+<\/script>
 </body>
 </html>`;
 }
@@ -982,8 +938,6 @@ function escHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
-let generatedHTML = '';
 
 function copyCode() {
   const code = document.getElementById('codeContent').textContent;
@@ -1011,4 +965,19 @@ function downloadGame() {
   showToast('Download iniciado!');
 }
 
-function clear
+function clearAll() {
+  if (confirm('Tem certeza que deseja limpar tudo?')) {
+    images = [];
+    wordPairs = [];
+    renderImageGallery();
+    addEmptyPair();
+    document.getElementById('ocrResults').style.display = 'none';
+    document.getElementById('portugueseText').value = '';
+    document.getElementById('otherText').value = '';
+    document.getElementById('codeContent').textContent = 'Clique em "Gerar Jogo" para criar o HTML';
+    showToast('Tudo limpo!');
+  }
+}
+</script>
+</body>
+</html>
