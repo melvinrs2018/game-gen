@@ -127,157 +127,278 @@ input[type="text"]:focus{outline:none;border-color:#8b5cf6}
   </div>
 </div>
 <script>
-const PEXELS_API_KEY='6V2jcyLJ7KDWPgduqBqYEV9BbZINMagupmAxCLFzj2d8R9YHcMoiv';
-let uploadedImages=[],pairs=[];
-const dropZone=document.getElementById('dropZone');
-const fileInput=document.getElementById('fileInput');
-const imgGrid=document.getElementById('imgGrid');
-const nlInput=document.getElementById('nlInput');
-const ptInput=document.getElementById('ptInput');
-const pairsContainer=document.getElementById('pairsContainer');
-const previewArea=document.getElementById('previewArea');
-const gameCodeDisplay=document.getElementById('gameCodeDisplay');
-const statusMessage=document.getElementById('statusMessage');
+// ============================================
+// CONFIGURAÇÃO - Substitua pela sua chave API
+// ============================================
+const PEXELS_API_KEY = 'SUA_CHAVE_API_AQUI'; // Obtenha em: https://www.pexels.com/api/
 
-// CTRL+V
-document.addEventListener('paste',function(e){
-  const tag=document.activeElement?document.activeElement.tagName:'';
-  if(tag==='INPUT'||tag==='TEXTAREA')return;
-  const items=(e.clipboardData||window.clipboardData).items;
-  if(!items)return;
-  const imgs=Array.from(items).filter(i=>i.type.startsWith('image/'));
-  if(!imgs.length)return;
+let uploadedImages = [], pairs = [];
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const imgGrid = document.getElementById('imgGrid');
+const nlInput = document.getElementById('nlInput');
+const ptInput = document.getElementById('ptInput');
+const pairsContainer = document.getElementById('pairsContainer');
+const previewArea = document.getElementById('previewArea');
+const gameCodeDisplay = document.getElementById('gameCodeDisplay');
+const statusMessage = document.getElementById('statusMessage');
+
+// ============================================
+// EVENTOS DE UPLOAD (Drag, Drop, Paste, Click)
+// ============================================
+
+// CTRL+V - colar imagens
+document.addEventListener('paste', function(e) {
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  const items = (e.clipboardData || window.clipboardData).items;
+  if (!items) return;
+  const imgs = Array.from(items).filter(i => i.type.startsWith('image/'));
+  if (!imgs.length) return;
   e.preventDefault();
   dropZone.classList.add('paste-flash');
-  setTimeout(()=>dropZone.classList.remove('paste-flash'),600);
-  imgs.forEach(i=>{const f=i.getAsFile();if(f)handleFiles([f]);});
+  setTimeout(() => dropZone.classList.remove('paste-flash'), 600);
+  imgs.forEach(i => {
+    const f = i.getAsFile();
+    if (f) handleFiles([f]);
+  });
 });
 
-dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
-dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
-fileInput.addEventListener('change',()=>{handleFiles(fileInput.files);fileInput.value='';});
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
 
-async function extractTextFromImage(file){
-  return new Promise((res,rej)=>{
-    Tesseract.recognize(file,'por+nld',{logger:m=>console.log(m)})
-      .then(({data:{text}})=>res(text)).catch(rej);
+// ============================================
+// OCR COM TESSERACT.JS
+// ============================================
+
+async function extractTextFromImage(file) {
+  return new Promise((res, rej) => {
+    Tesseract.recognize(file, 'por+nld', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          showStatus(`🔍 OCR: ${Math.round(m.progress * 100)}%`, 'loading');
+        }
+      }
+    })
+    .then(({ data: { text } }) => res(text))
+    .catch(rej);
   });
 }
 
-async function processImageWithOCR(file,fileId){
-  try{
-    const text=await extractTextFromImage(file);
+async function processImageWithOCR(file, fileId) {
+  try {
+    const text = await extractTextFromImage(file);
     // Cada linha tem NL+PT juntos: "ZICH VOELEN SE SENTIR"
     // Divide ao meio: primeira metade=NL, segunda=PT
-    const lines=text.split(/\r?\n/)
-      .map(l=>l.replace(/^[^\p{L}]+|[^\p{L}]+$/gu,'').trim())
-      .filter(l=>l.length>=4);
-    if(!lines.length){showStatus('⚠️ OCR não encontrou texto.','error');return;}
-    const nlW=[],ptW=[];
-    lines.forEach(line=>{
-      const words=line.trim().split(/\s+/);
-      if(words.length<2)return;
-      const mid=Math.ceil(words.length/2);
-      const nl=words.slice(0,mid).join(' ').toUpperCase();
-      const pt=words.slice(mid).join(' ').toUpperCase();
-      if(nl&&pt){nlW.push(nl);ptW.push(pt);}
+    const lines = text.split(/\r?\n/)
+      .map(l => l.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '').trim())
+      .filter(l => l.length >= 3);
+    
+    if (!lines.length) {
+      showStatus('⚠️ OCR não encontrou texto legível na imagem.', 'error');
+      return;
+    }
+    
+    const nlW = [], ptW = [];
+    lines.forEach(line => {
+      const words = line.trim().split(/\s+/);
+      if (words.length < 2) return;
+      const mid = Math.ceil(words.length / 2);
+      const nl = words.slice(0, mid).join(' ').toUpperCase();
+      const pt = words.slice(mid).join(' ').toUpperCase();
+      if (nl && pt) { nlW.push(nl); ptW.push(pt); }
     });
-    nlInput.value=nlW.join('\n');
-    ptInput.value=ptW.join('\n');
-    const min=Math.min(nlW.length,ptW.length);
-    if(min>0){
-      pairs=[];
-      for(let i=0;i<min;i++)pairs.push({nl:nlW[i],pt:ptW[i],imageUrl:null});
-      showStatus('✅ OCR extraiu '+min+' pares! Verifique e corrija se necessário.','success');
+    
+    if (nlW.length > 0) nlInput.value = nlW.join('\n');
+    if (ptW.length > 0) ptInput.value = ptW.join('\n');
+    
+    const min = Math.min(nlW.length, ptW.length);
+    if (min > 0) {
+      pairs = [];
+      for (let i = 0; i < min; i++) pairs.push({ nl: nlW[i], pt: ptW[i], imageUrl: null });
+      showStatus('✅ OCR extraiu ' + min + ' pares! Verifique e corrija se necessário.', 'success');
       renderPairsAndPreview();
-    }else{showStatus('⚠️ Não foi possível separar NL/PT.','error');}
-  }catch(err){showStatus('Erro no OCR: '+err.message,'error');}
+    } else {
+      showStatus('⚠️ Não foi possível separar NL/PT. Tente inserir manualmente.', 'error');
+    }
+  } catch (err) {
+    showStatus('Erro no OCR: ' + err.message, 'error');
+    console.error(err);
+  }
 }
 
-function handleFiles(files){
-  Array.from(files).filter(f=>f.type.startsWith('image/')).forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=async e=>{
-      const id=Date.now()+'_'+Math.random();
-      uploadedImages.push({id,dataUrl:e.target.result,file});
+function handleFiles(files) {
+  Array.from(files).filter(f => f.type.startsWith('image/')).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const id = Date.now() + '_' + Math.random();
+      uploadedImages.push({ id, dataUrl: e.target.result, file });
       renderImageThumbs();
-      showStatus('🔍 Analisando texto da imagem...','loading');
-      await processImageWithOCR(file,id);
+      showStatus('🔍 Analisando texto da imagem...', 'loading');
+      await processImageWithOCR(file, id);
     };
     reader.readAsDataURL(file);
   });
 }
 
-function renderImageThumbs(){
-  imgGrid.innerHTML=uploadedImages.map(img=>`<div class="img-thumb"><img src="${img.dataUrl}"><button onclick="removeImage('${img.id}')">×</button></div>`).join('');
+function renderImageThumbs() {
+  imgGrid.innerHTML = uploadedImages.map(img => 
+    `<div class="img-thumb"><img src="${img.dataUrl}"><button onclick="removeImage('${img.id}')">×</button></div>`
+  ).join('');
 }
-function removeImage(id){uploadedImages=uploadedImages.filter(i=>i.id!=id);renderImageThumbs();}
 
-function importManualWords(){
-  const nl=nlInput.value.trim(),pt=ptInput.value.trim();
-  if(!nl||!pt){showStatus('Preencha ambos os campos!','error');return;}
-  const nlL=nl.split('\n').map(w=>w.trim().toUpperCase()).filter(w=>w);
-  const ptL=pt.split('\n').map(w=>w.trim().toUpperCase()).filter(w=>w);
-  const max=Math.min(nlL.length,ptL.length);
-  pairs=[];
-  for(let i=0;i<max;i++)pairs.push({nl:nlL[i],pt:ptL[i],imageUrl:null});
-  showStatus('✅ '+max+' pares importados!','success');
+function removeImage(id) {
+  uploadedImages = uploadedImages.filter(i => i.id != id);
+  renderImageThumbs();
+}
+
+// ============================================
+// IMPORTAÇÃO MANUAL DE PALAVRAS
+// ============================================
+
+function importManualWords() {
+  const nl = nlInput.value.trim(), pt = ptInput.value.trim();
+  if (!nl || !pt) { showStatus('Preencha ambos os campos!', 'error'); return; }
+  const nlL = nl.split('\n').map(w => w.trim().toUpperCase()).filter(w => w);
+  const ptL = pt.split('\n').map(w => w.trim().toUpperCase()).filter(w => w);
+  const max = Math.min(nlL.length, ptL.length);
+  pairs = [];
+  for (let i = 0; i < max; i++) pairs.push({ nl: nlL[i], pt: ptL[i], imageUrl: null });
+  showStatus('✅ ' + max + ' pares importados!', 'success');
   renderPairsAndPreview();
 }
 
-function addEmptyPair(){pairs.push({nl:'',pt:'',imageUrl:null});renderPairsAndPreview();}
-function removePair(i){pairs.splice(i,1);renderPairsAndPreview();}
-function updatePair(i,f,v){pairs[i][f]=v.toUpperCase();renderPreviewOnly();}
-
-async function fetchImageForWord(word){
-  if(!word)return null;
-  try{
-    const pu=`https://api.pexels.com/v1/search?query=${encodeURIComponent(word)}&per_page=1&orientation=square&size=small`;
-    const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pu)}`);
-    if(!r.ok)return null;
-    const d=JSON.parse((await r.json()).contents);
-    return d.photos&&d.photos.length?d.photos[0].src.small:null;
-  }catch{return null;}
-}
-
-async function fetchSingleImage(idx){
-  const term=pairs[idx].pt||pairs[idx].nl;
-  if(!term){showStatus('Digite uma palavra primeiro!','error');return;}
-  showStatus('🔍 Buscando: '+term+'...','loading');
-  const url=await fetchImageForWord(term);
-  if(url){pairs[idx].imageUrl=url;showStatus('✅ Imagem encontrada!','success');}
-  else showStatus('❌ Sem imagem para: '+term,'error');
+function addEmptyPair() {
+  pairs.push({ nl: '', pt: '', imageUrl: null });
   renderPairsAndPreview();
 }
 
-async function fetchAllPexelsImages(){
-  if(!pairs.filter(p=>p.nl||p.pt).length){showStatus('Adicione pares primeiro!','error');return;}
-  showStatus('🖼️ Buscando imagens...','loading');
-  for(let i=0;i<pairs.length;i++){
-    const term=pairs[i].pt||pairs[i].nl;
-    if(term){const url=await fetchImageForWord(term);if(url)pairs[i].imageUrl=url;renderPairsAndPreview();}
-    await new Promise(r=>setTimeout(r,300));
+function removePair(i) {
+  pairs.splice(i, 1);
+  renderPairsAndPreview();
+}
+
+function updatePair(i, f, v) {
+  pairs[i][f] = v.toUpperCase();
+  renderPreviewOnly();
+}
+
+// ============================================
+// BUSCA DE IMAGENS (PEXELS + FALLBACK)
+// ============================================
+
+const CORS_PROXIES = [
+  'https://api.allorigins.win/get?url=',
+  'https://api.codetabs.com/v1/proxy?quest='
+];
+
+async function fetchImageForWord(word) {
+  if (!word) return null;
+  
+  // Tentativa direta (se CORS permitir)
+  try {
+    const directUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(word)}&per_page=1&orientation=square&size=small`;
+    const directRes = await fetch(directUrl, {
+      headers: { 'Authorization': PEXELS_API_KEY },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (directRes.ok) {
+      const d = await directRes.json();
+      return d.photos && d.photos.length ? d.photos[0].src.small : null;
+    }
+  } catch (e) { /* fallback para proxy */ }
+  
+  // Tentativa via proxies CORS
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const pu = `https://api.pexels.com/v1/search?query=${encodeURIComponent(word)}&per_page=1&orientation=square&size=small`;
+      const r = await fetch(proxy + encodeURIComponent(pu), {
+        headers: { 'Authorization': PEXELS_API_KEY },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!r.ok) continue;
+      const wrapper = await r.json();
+      const contents = wrapper.contents || wrapper;
+      const d = typeof contents === 'string' ? JSON.parse(contents) : contents;
+      return d.photos && d.photos.length ? d.photos[0].src.small : null;
+    } catch (e) { continue; }
   }
-  showStatus('✅ Todas as imagens buscadas!','success');
+  return null;
+}
+
+async function fetchSingleImage(idx) {
+  const term = pairs[idx].pt || pairs[idx].nl;
+  if (!term) { showStatus('Digite uma palavra primeiro!', 'error'); return; }
+  showStatus('🔍 Buscando: ' + term + '...', 'loading');
+  const url = await fetchImageForWord(term);
+  if (url) {
+    pairs[idx].imageUrl = url;
+    showStatus('✅ Imagem encontrada!', 'success');
+  } else {
+    showStatus('❌ Sem imagem para: ' + term + ' (verifique a chave API)', 'error');
+  }
   renderPairsAndPreview();
 }
 
-function customUploadImage(idx){
-  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
-  inp.onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=ev=>{pairs[idx].imageUrl=ev.target.result;renderPairsAndPreview();showStatus('✅ Imagem adicionada!','success');};r.readAsDataURL(f);}};
+async function fetchAllPexelsImages() {
+  if (!pairs.filter(p => p.nl || p.pt).length) {
+    showStatus('Adicione pares primeiro!', 'error');
+    return;
+  }
+  showStatus('🖼️ Buscando imagens...', 'loading');
+  for (let i = 0; i < pairs.length; i++) {
+    const term = pairs[i].pt || pairs[i].nl;
+    if (term) {
+      const url = await fetchImageForWord(term);
+      if (url) pairs[i].imageUrl = url;
+      renderPairsAndPreview();
+    }
+    await new Promise(r => setTimeout(r, 400)); // delay maior para evitar rate limit
+  }
+  showStatus('✅ Todas as imagens buscadas!', 'success');
+  renderPairsAndPreview();
+}
+
+function customUploadImage(idx) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if (f) {
+      const r = new FileReader();
+      r.onload = ev => {
+        pairs[idx].imageUrl = ev.target.result;
+        renderPairsAndPreview();
+        showStatus('✅ Imagem adicionada!', 'success');
+      };
+      r.readAsDataURL(f);
+    }
+  };
   inp.click();
 }
 
-function renderPairsAndPreview(){renderPairsList();renderPreviewOnly();}
+// ============================================
+// RENDERIZAÇÃO
+// ============================================
 
-function renderPairsList(){
-  if(!pairs.length){pairsContainer.innerHTML='<div class="empty-state">Nenhum par. Importe palavras ou clique em "+ Adicionar par"</div>';return;}
-  pairsContainer.innerHTML=pairs.map((p,i)=>`
+function renderPairsAndPreview() {
+  renderPairsList();
+  renderPreviewOnly();
+}
+
+function renderPairsList() {
+  if (!pairs.length) {
+    pairsContainer.innerHTML = '<div class="empty-state">Nenhum par. Importe palavras ou clique em "+ Adicionar par"</div>';
+    return;
+  }
+  pairsContainer.innerHTML = pairs.map((p, i) => `
     <div class="pair-card">
-      <input type="text" value="${escapeHtml(p.nl)}" placeholder="Nederlands" onchange="updatePair(${i},'nl',this.value)">
-      <input type="text" value="${escapeHtml(p.pt)}" placeholder="Português" onchange="updatePair(${i},'pt',this.value)">
-      <div class="img-slot" onclick="customUploadImage(${i})">${p.imageUrl?`<img src="${p.imageUrl}" crossorigin="anonymous">`:'📷'}</div>
+      <input type="text" value="${escapeHtml(p.nl)}" placeholder="Nederlands" lang="nl" onchange="updatePair(${i},'nl',this.value)">
+      <input type="text" value="${escapeHtml(p.pt)}" placeholder="Português" lang="pt" onchange="updatePair(${i},'pt',this.value)">
+      <div class="img-slot" onclick="customUploadImage(${i})" title="Clique para upload manual">${p.imageUrl ? `<img src="${p.imageUrl}">` : '📷'}</div>
       <div style="display:flex;gap:6px">
         <button class="icon-btn" onclick="fetchSingleImage(${i})" title="Buscar imagem">🔍</button>
         <button class="icon-btn" onclick="removePair(${i})" title="Remover">🗑️</button>
@@ -285,32 +406,48 @@ function renderPairsList(){
     </div>`).join('');
 }
 
-function renderPreviewOnly(){
-  const v=pairs.filter(p=>p.nl&&p.pt);
-  if(!v.length){previewArea.innerHTML='<div class="empty-state">Nenhum par válido</div>';return;}
-  previewArea.innerHTML=v.map(p=>`
+function renderPreviewOnly() {
+  const v = pairs.filter(p => p.nl && p.pt);
+  if (!v.length) {
+    previewArea.innerHTML = '<div class="empty-state">Nenhum par válido</div>';
+    return;
+  }
+  previewArea.innerHTML = v.map(p => `
     <div class="preview-card">
-      ${p.imageUrl?`<img src="${p.imageUrl}" crossorigin="anonymous" onerror="this.style.display='none'">`:'<div style="width:55px;height:45px;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">📝</div>'}
+      ${p.imageUrl ? `<img src="${p.imageUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
+      ${!p.imageUrl ? '<div style="width:55px;height:45px;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">📝</div>' : ''}
       <div class="preview-nl">${escapeHtml(p.nl)}</div>
       <div class="preview-pt">${escapeHtml(p.pt)}</div>
     </div>`).join('');
 }
 
-function generateGame(){
-  const v=pairs.filter(p=>p.nl&&p.pt);
-  if(!v.length){showStatus('Adicione pelo menos um par completo!','error');return;}
-  gameCodeDisplay.textContent=buildGameHTML(v);
-  showStatus('✅ Jogo gerado com '+v.length+' pares!','success');
+// ============================================
+// GERAÇÃO DO JOGO
+// ============================================
+
+function generateGame() {
+  const v = pairs.filter(p => p.nl && p.pt);
+  if (!v.length) { showStatus('Adicione pelo menos um par completo!', 'error'); return; }
+  gameCodeDisplay.textContent = buildGameHTML(v);
+  showStatus('✅ Jogo gerado com ' + v.length + ' pares!', 'success');
 }
 
-function buildGameHTML(list){
-  let cards=[];
-  list.forEach((p,i)=>{
-    cards.push({id:'nl_'+i,text:p.nl,pairId:i,image:p.imageUrl||null,type:'nl'});
-    cards.push({id:'pt_'+i,text:p.pt,pairId:i,image:null,type:'pt'});
+function buildGameHTML(list) {
+  let cards = [];
+  list.forEach((p, i) => {
+    cards.push({ id: 'nl_' + i, text: p.nl, pairId: i, image: p.imageUrl || null, type: 'nl' });
+    cards.push({ id: 'pt_' + i, text: p.pt, pairId: i, image: null, type: 'pt' });
   });
-  for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
-  const total=list.length;
+  
+  // Embaralhar Fisher-Yates
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+  
+  const total = list.length;
+  const gameDataJSON = JSON.stringify(cards).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+  
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -324,7 +461,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1e1b4b
 h1{text-align:center;color:#fff;font-size:2rem;margin-bottom:8px}
 .subtitle{text-align:center;color:#a78bfa;margin-bottom:32px;font-size:.9rem}
 .game-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;margin-bottom:30px}
-.card{background:linear-gradient(135deg,#2d2b55,#1e1b4b);border-radius:16px;padding:20px 12px;text-align:center;cursor:pointer;transition:all .25s;border:2px solid #4c1d95;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.card{background:linear-gradient(135deg,#2d2b55,#1e1b4b);border-radius:16px;padding:20px 12px;text-align:center;cursor:pointer;transition:all .25s;border:2px solid #4c1d95;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;user-select:none}
 .card:hover:not(.matched){transform:translateY(-6px);border-color:#8b5cf6;box-shadow:0 10px 25px -5px rgba(139,92,246,.3)}
 .card.selected{background:linear-gradient(135deg,#4c1d95,#6d28d9);border-color:#f59e0b;transform:scale(1.02)}
 .card.matched{opacity:.5;cursor:default;transform:none;background:#1e293b;border-color:#334155}
@@ -351,24 +488,118 @@ h1{text-align:center;color:#fff;font-size:2rem;margin-bottom:8px}
 <div class="victory" id="victoryMessage">🎉 PARABÉNS! VOCÊ COMPLETOU TODOS OS PARES! 🎉</div>
 </div>
 <script>
-const GAME_DATA=${JSON.stringify(cards)};
-let cur=[],sel=null,matched=0,locked=false;
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function init(){cur=GAME_DATA.map(c=>({...c,matched:false}));cur=shuffle(cur);sel=null;matched=0;locked=false;score();document.getElementById('victoryMessage').style.display='none';render();}
-function render(){document.getElementById('gameBoard').innerHTML=cur.map((c,i)=>{const img=c.image&&!c.matched?`<img src="${c.image}" onerror="this.style.display='none'">`:'';return`<div class="card ${c.matched?'matched':''} ${sel===i?'selected':''}" onclick="click(${i})"><div class="badge ${c.type==='nl'?'badge-nl':'badge-pt'}">${c.type==='nl'?'🇳🇱 NL':'🇵🇹 PT'}</div>${img}<div class="card-text">${c.matched?'✓':c.text}</div></div>`;}).join('');}
-function click(i){if(locked||cur[i].matched)return;if(sel===i){sel=null;render();return;}if(sel===null){sel=i;render();return;}const a=cur[sel],b=cur[i];if(a.pairId===b.pairId&&a.type!==b.type){cur[sel].matched=cur[i].matched=true;matched++;sel=null;score();render();if(matched===${total})setTimeout(()=>{document.getElementById('victoryMessage').style.display='block';},500);}else{locked=true;const p=sel;sel=i;render();const cs=document.querySelectorAll('.card');if(cs[p])cs[p].classList.add('wrong');if(cs[i])cs[i].classList.add('wrong');setTimeout(()=>{sel=null;locked=false;render();},800);}}
-function score(){document.getElementById('scoreDisplay').textContent='Pares encontrados: '+matched+' / ${total}';}
-function resetGame(){init();}
+const GAME_DATA = ${gameDataJSON};
+let cur = [], sel = null, matched = 0, locked = false;
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function init() {
+  cur = GAME_DATA.map(c => ({...c, matched: false}));
+  cur = shuffle(cur);
+  sel = null;
+  matched = 0;
+  locked = false;
+  score();
+  document.getElementById('victoryMessage').style.display = 'none';
+  render();
+}
+
+function render() {
+  document.getElementById('gameBoard').innerHTML = cur.map((c, i) => {
+    const img = c.image && !c.matched ? '<img src="' + c.image + '" onerror="this.style.display=\\'none\\'">' : '';
+    return '<div class="card ' + (c.matched ? 'matched' : '') + ' ' + (sel === i ? 'selected' : '') + '" onclick="cardClick(' + i + ')">' +
+      '<div class="badge ' + (c.type === \\'nl\\' ? \\'badge-nl\\' : \\'badge-pt\\') + \\'\\">' + (c.type === \\'nl\\' ? \\'🇳🇱 NL\\' : \\'🇵🇹 PT\\') + \\'</div>\\' +
+      img +
+      \\'<div class="card-text">\\' + (c.matched ? \\'✓\\' : c.text) + \\'</div></div>\\';
+  }).join(\\'\\');
+}
+
+function cardClick(i) {
+  if (locked || cur[i].matched) return;
+  if (sel === i) { sel = null; render(); return; }
+  if (sel === null) { sel = i; render(); return; }
+  
+  const a = cur[sel], b = cur[i];
+  if (a.pairId === b.pairId && a.type !== b.type) {
+    cur[sel].matched = cur[i].matched = true;
+    matched++;
+    sel = null;
+    score();
+    render();
+    if (matched === ${total}) {
+      setTimeout(() => { document.getElementById(\\'victoryMessage\\').style.display = \\'block\\'; }, 500);
+    }
+  } else {
+    locked = true;
+    const p = sel;
+    sel = i;
+    render();
+    const cs = document.querySelectorAll(\\'.card\\');
+    if (cs[p]) cs[p].classList.add(\\'wrong\\');
+    if (cs[i]) cs[i].classList.add(\\'wrong\\');
+    setTimeout(() => { sel = null; locked = false; render(); }, 800);
+  }
+}
+
+function score() {
+  document.getElementById(\\'scoreDisplay\\').textContent = \\'Pares encontrados: \\' + matched + \\' / ${total}\\';
+}
+
+function resetGame() { init(); }
+
 init();
-<\/script>
+<\\/script>
 </body>
 </html>`;
 }
 
-function escapeHtml(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function showStatus(msg,type){statusMessage.style.display='flex';statusMessage.className='status-bar '+type;statusMessage.innerHTML=type==='loading'?'<div class="spinner"></div>'+msg:msg;}
-function copyGameCode(){const c=gameCodeDisplay.textContent;if(!c||c==='Clique em "Gerar Jogo" para criar o HTML'){showStatus('Gere o jogo primeiro!','error');return;}navigator.clipboard.writeText(c).then(()=>showStatus('✅ Código copiado!','success'));}
-function downloadGameHTML(){const c=gameCodeDisplay.textContent;if(!c||c==='Clique em "Gerar Jogo" para criar o HTML'){showStatus('Gere o jogo primeiro!','error');return;}const b=new Blob([c],{type:'text/html'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='jogo-nl-pt.html';a.click();URL.revokeObjectURL(u);}
+// ============================================
+// UTILITÁRIOS
+// ============================================
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showStatus(msg, type) {
+  statusMessage.style.display = 'flex';
+  statusMessage.className = 'status-bar ' + type;
+  statusMessage.innerHTML = type === 'loading' ? '<div class="spinner"></div>' + msg : msg;
+}
+
+function copyGameCode() {
+  const c = gameCodeDisplay.textContent;
+  if (!c || c === 'Clique em "Gerar Jogo" para criar o HTML') {
+    showStatus('Gere o jogo primeiro!', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(c).then(() => showStatus('✅ Código copiado!', 'success'));
+}
+
+function downloadGameHTML() {
+  const c = gameCodeDisplay.textContent;
+  if (!c || c === 'Clique em "Gerar Jogo" para criar o HTML') {
+    showStatus('Gere o jogo primeiro!', 'error');
+    return;
+  }
+  const b = new Blob([c], { type: 'text/html' });
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href = u;
+  a.download = 'jogo-nl-pt.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(u);
+  showStatus('✅ Jogo baixado!', 'success');
+}
 </script>
 </body>
 </html>
