@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -316,6 +317,7 @@ input[type="text"]:focus {
 
 .pair-card input:focus {
     border-color: #8b5cf6;
+    outline: none;
 }
 
 .img-slot {
@@ -460,6 +462,18 @@ input[type="text"]:focus {
     background: #334155;
     border-radius: 10px;
 }
+
+/* Paste highlight animation */
+.drop-zone.paste-flash {
+    border-color: #10b981;
+    background: #0d2a1f;
+    animation: pasteFlash 0.6s ease;
+}
+
+@keyframes pasteFlash {
+    0% { border-color: #10b981; background: #0d2a1f; }
+    100% { border-color: #334155; background: #1a1a2e; }
+}
 </style>
 </head>
 <body>
@@ -477,15 +491,9 @@ input[type="text"]:focus {
             <div class="img-grid" id="imgGrid"></div>
         </div>
 
-        <!-- Seção 2: API Pexels -->
+        <!-- Seção 2: Palavras manuais (renumerada, sem campo Pexels) -->
         <div class="section">
-            <h2>🔑 2. Chave Pexels (grátis em pexels.com/api)</h2>
-            <input type="text" id="pexelsKey" placeholder="Cole sua API key do Pexels" value="6V2jcyLJ7KDWPgduqBqYEV9BbZINMagupmAxCLFzj2d8R9YHcMoiv">
-        </div>
-
-        <!-- Seção 3: Palavras manuais -->
-        <div class="section">
-            <h2>✏️ 3. Digite ou cole as palavras</h2>
+            <h2>✏️ 2. Digite ou cole as palavras</h2>
             <div class="input-group">
                 <div>
                     <span class="textarea-label">🇳🇱 NEDERLANDS (uma por linha)</span>
@@ -502,9 +510,9 @@ input[type="text"]:focus {
             </button>
         </div>
 
-        <!-- Seção 4: Pares -->
+        <!-- Seção 3: Pares -->
         <div class="section">
-            <h2>🔗 4. Pares de palavras</h2>
+            <h2>🔗 3. Pares de palavras</h2>
             <div class="pairs-container" id="pairsContainer">
                 <div class="empty-state">Nenhum par. Importe palavras ou adicione manualmente.</div>
             </div>
@@ -539,9 +547,12 @@ input[type="text"]:focus {
 </div>
 
 <script>
+// ========== CONFIGURAÇÃO (chave embutida, sem campo visível) ==========
+const PEXELS_API_KEY = '6V2jcyLJ7KDWPgduqBqYEV9BbZINMagupmAxCLFzj2d8R9YHcMoiv';
+
 // Estado global
-let uploadedImages = [];     // { id, dataUrl, file }
-let pairs = [];              // { nl, pt, imageUrl }
+let uploadedImages = [];
+let pairs = [];
 
 // Elementos DOM
 const dropZone = document.getElementById('dropZone');
@@ -553,6 +564,51 @@ const pairsContainer = document.getElementById('pairsContainer');
 const previewArea = document.getElementById('previewArea');
 const gameCodeDisplay = document.getElementById('gameCodeDisplay');
 const statusMessage = document.getElementById('statusMessage');
+
+// ========== CORREÇÃO 1: Ctrl+V PASTE GLOBAL ==========
+document.addEventListener('paste', function(e) {
+    // Não interceptar se o foco estiver num campo de texto/textarea
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    const items = (e.clipboardData || window.clipboardData).items;
+    if (!items) return;
+
+    const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'));
+    if (imageItems.length === 0) return;
+
+    e.preventDefault();
+
+    // Flash visual na drop zone
+    dropZone.classList.add('paste-flash');
+    setTimeout(() => dropZone.classList.remove('paste-flash'), 600);
+
+    imageItems.forEach(item => {
+        const file = item.getAsFile();
+        if (file) handleFiles([file]);
+    });
+});
+
+// ========== EVENTOS DE DRAG & DROP ==========
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', () => {
+    handleFiles(fileInput.files);
+    fileInput.value = '';
+});
 
 // ========== FUNÇÕES DE OCR ==========
 async function extractTextFromImage(file) {
@@ -568,32 +624,24 @@ async function extractTextFromImage(file) {
 async function processImageWithOCR(file, fileId) {
     try {
         const extractedText = await extractTextFromImage(file);
-        console.log('Texto extraído:', extractedText);
-        
-        // Separar palavras por linha e limpar
         const lines = extractedText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-        
-        // Detectar tentativamente quais linhas são NL e quais são PT
-        // Heurística simples: palavras curtas podem ser NL, mas vamos mostrar todas
+
         const nlWords = [];
         const ptWords = [];
-        
+
         for (let line of lines) {
-            // Remove números e caracteres especiais no início/fim
             line = line.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
             if (line.length < 2) continue;
-            
-            // Palavras comuns PT vs NL (simplificado)
+
             const lower = line.toLowerCase();
-            if (lower.includes('ão') || lower.includes('inho') || lower.includes('mente') || 
-                lower === 'cachorro' || lower === 'gato' || lower === 'pássaro' || lower === 'peixe') {
+            if (lower.includes('ão') || lower.includes('inha') || lower.includes('inho') ||
+                lower.includes('mente') || lower.includes('ção') || lower.includes('ões')) {
                 ptWords.push(line);
             } else {
                 nlWords.push(line);
             }
         }
-        
-        // Se detectou palavras em ambos os idiomas, importa como pares
+
         if (nlWords.length > 0 && ptWords.length > 0) {
             const newPairs = [];
             const minLen = Math.min(nlWords.length, ptWords.length);
@@ -607,10 +655,9 @@ async function processImageWithOCR(file, fileId) {
                 return;
             }
         }
-        
-        // Fallback: se não conseguiu separar, mostra mensagem
-        showStatus(`⚠️ OCR extraiu ${lines.length} palavras, mas não foi possível separar NL/PT. Use a importação manual.`, 'error');
-        
+
+        showStatus(`⚠️ OCR extraiu ${lines.length} linhas. Use a importação manual para separar NL/PT.`, 'error');
+
     } catch (err) {
         console.error('OCR error:', err);
         showStatus('Erro no OCR: ' + err.message, 'error');
@@ -620,15 +667,14 @@ async function processImageWithOCR(file, fileId) {
 // ========== GERENCIAMENTO DE IMAGENS ==========
 function handleFiles(files) {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-    
+
     imageFiles.forEach(file => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const imageId = Date.now() + '_' + Math.random();
             uploadedImages.push({ id: imageId, dataUrl: e.target.result, file: file });
             renderImageThumbs();
-            
-            // Executar OCR automaticamente
+
             showStatus('🔍 Analisando texto da imagem...', 'loading');
             await processImageWithOCR(file, imageId);
         };
@@ -658,27 +704,27 @@ function removeImage(id) {
 function importManualWords() {
     const nlText = nlInput.value.trim();
     const ptText = ptInput.value.trim();
-    
+
     if (!nlText || !ptText) {
         showStatus('Preencha ambos os campos com palavras!', 'error');
         return;
     }
-    
+
     const nlList = nlText.split('\n').map(w => w.trim().toUpperCase()).filter(w => w);
     const ptList = ptText.split('\n').map(w => w.trim().toUpperCase()).filter(w => w);
-    
+
     if (nlList.length === 0 || ptList.length === 0) {
         showStatus('Nenhuma palavra válida encontrada!', 'error');
         return;
     }
-    
+
     const maxPairs = Math.min(nlList.length, ptList.length);
     pairs = [];
     for (let i = 0; i < maxPairs; i++) {
         pairs.push({ nl: nlList[i], pt: ptList[i], imageUrl: null });
     }
-    
-    showStatus(`✅ ${maxPairs} pares importados manualmente!`, 'success');
+
+    showStatus(`✅ ${maxPairs} pares importados!`, 'success');
     renderPairsAndPreview();
 }
 
@@ -697,39 +743,40 @@ function updatePair(index, field, value) {
     renderPreviewOnly();
 }
 
-async function fetchImageForWord(word, apiKey) {
-    if (!word || !apiKey) return null;
+// ========== CORREÇÃO 3: PEXELS via proxy para evitar CORS ==========
+async function fetchImageForWord(word) {
+    if (!word) return null;
     try {
-        const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(word)}&per_page=1&orientation=square`, {
-            headers: { 'Authorization': apiKey }
-        });
-        const data = await response.json();
+        // Usa o proxy allorigins para contornar o bloqueio CORS da API Pexels no browser
+        const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(word)}&per_page=1&orientation=square&size=small`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(pexelsUrl)}`;
+
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Proxy error: ' + response.status);
+
+        const proxyData = await response.json();
+        const data = JSON.parse(proxyData.contents);
+
         if (data.photos && data.photos.length > 0) {
             return data.photos[0].src.small;
         }
         return null;
     } catch (err) {
-        console.error('Pexels error:', err);
+        console.error('Pexels fetch error:', err);
         return null;
     }
 }
 
 async function fetchSingleImage(index) {
-    const apiKey = document.getElementById('pexelsKey').value.trim();
-    if (!apiKey) {
-        showStatus('Insira sua chave API do Pexels!', 'error');
-        return;
-    }
-    
     const pair = pairs[index];
     const searchTerm = pair.pt || pair.nl;
     if (!searchTerm) {
         showStatus('Digite uma palavra para buscar imagem!', 'error');
         return;
     }
-    
+
     showStatus(`🔍 Buscando imagem para: ${searchTerm}...`, 'loading');
-    const imgUrl = await fetchImageForWord(searchTerm, apiKey);
+    const imgUrl = await fetchImageForWord(searchTerm);
     if (imgUrl) {
         pairs[index].imageUrl = imgUrl;
         showStatus(`✅ Imagem encontrada!`, 'success');
@@ -740,30 +787,25 @@ async function fetchSingleImage(index) {
 }
 
 async function fetchAllPexelsImages() {
-    const apiKey = document.getElementById('pexelsKey').value.trim();
-    if (!apiKey) {
-        showStatus('Insira sua chave API do Pexels!', 'error');
-        return;
-    }
-    
     const validPairs = pairs.filter(p => p.nl || p.pt);
     if (validPairs.length === 0) {
         showStatus('Adicione pares primeiro!', 'error');
         return;
     }
-    
+
     showStatus(`🖼️ Buscando imagens para ${pairs.length} palavras...`, 'loading');
-    
+
     for (let i = 0; i < pairs.length; i++) {
         const pair = pairs[i];
         const searchTerm = pair.pt || pair.nl;
         if (searchTerm) {
-            const imgUrl = await fetchImageForWord(searchTerm, apiKey);
+            const imgUrl = await fetchImageForWord(searchTerm);
             if (imgUrl) pairs[i].imageUrl = imgUrl;
-            await new Promise(r => setTimeout(r, 200)); // Rate limiting
+            renderPairsAndPreview();
+            await new Promise(r => setTimeout(r, 300));
         }
     }
-    
+
     showStatus(`✅ Todas as imagens foram buscadas!`, 'success');
     renderPairsAndPreview();
 }
@@ -798,19 +840,19 @@ function renderPairsList() {
         pairsContainer.innerHTML = '<div class="empty-state">Nenhum par. Importe palavras ou clique em "+ Adicionar par"</div>';
         return;
     }
-    
+
     pairsContainer.innerHTML = pairs.map((pair, idx) => `
         <div class="pair-card">
-            <input type="text" value="${escapeHtml(pair.nl)}" placeholder="Nederlands" 
+            <input type="text" value="${escapeHtml(pair.nl)}" placeholder="Nederlands"
                    onchange="updatePair(${idx}, 'nl', this.value)">
             <input type="text" value="${escapeHtml(pair.pt)}" placeholder="Português"
                    onchange="updatePair(${idx}, 'pt', this.value)">
-            <div class="img-slot" onclick="customUploadImage(${idx})">
+            <div class="img-slot" onclick="customUploadImage(${idx})" title="Clique para enviar imagem própria">
                 ${pair.imageUrl ? `<img src="${pair.imageUrl}" crossorigin="anonymous">` : '📷'}
             </div>
             <div style="display: flex; gap: 6px;">
-                <button class="icon-btn" onclick="fetchSingleImage(${idx})" title="Buscar Pexels">🔍</button>
-                <button class="icon-btn" onclick="removePair(${idx})" title="Remover">🗑️</button>
+                <button class="icon-btn" onclick="fetchSingleImage(${idx})" title="Buscar imagem automaticamente">🔍</button>
+                <button class="icon-btn" onclick="removePair(${idx})" title="Remover par">🗑️</button>
             </div>
         </div>
     `).join('');
@@ -822,10 +864,13 @@ function renderPreviewOnly() {
         previewArea.innerHTML = '<div class="empty-state">Nenhum par válido (preencha NL e PT)</div>';
         return;
     }
-    
+
     previewArea.innerHTML = validPairs.map(p => `
         <div class="preview-card">
-            ${p.imageUrl ? `<img src="${p.imageUrl}" crossorigin="anonymous" onerror="this.style.display='none'">` : '<div style="width:55px;height:45px;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">📝</div>'}
+            ${p.imageUrl
+                ? `<img src="${p.imageUrl}" crossorigin="anonymous" onerror="this.style.display='none'">`
+                : '<div style="width:55px;height:45px;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">📝</div>'
+            }
             <div class="preview-nl">${escapeHtml(p.nl)}</div>
             <div class="preview-pt">${escapeHtml(p.pt)}</div>
         </div>
@@ -839,14 +884,13 @@ function generateGame() {
         showStatus('Adicione pelo menos um par completo (NL e PT)!', 'error');
         return;
     }
-    
+
     const gameHTML = buildGameHTML(validPairs);
     gameCodeDisplay.textContent = gameHTML;
     showStatus(`✅ Jogo gerado com ${validPairs.length} pares!`, 'success');
 }
 
 function buildGameHTML(pairsList) {
-    // Criar cartas para o jogo de memória
     let cards = [];
     pairsList.forEach((pair, idx) => {
         cards.push({
@@ -864,32 +908,31 @@ function buildGameHTML(pairsList) {
             type: 'pt'
         });
     });
-    
-    // Embaralhar
+
     const shuffledCards = [...cards];
     for (let i = shuffledCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]];
     }
-    
+
     const totalPairs = pairsList.length;
-    
+
     return `<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jogo NL ↔ PT - Associação de Palavras</title>
+<title>Jogo NL \u2194 PT - Associação de Palavras</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:linear-gradient(135deg, #1e1b4b, #0f172a);min-height:100vh;padding:30px 20px}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#1e1b4b,#0f172a);min-height:100vh;padding:30px 20px}
 .container{max-width:1200px;margin:0 auto}
 h1{text-align:center;color:#fff;font-size:2rem;margin-bottom:8px;letter-spacing:-0.5px}
 .subtitle{text-align:center;color:#a78bfa;margin-bottom:32px;font-size:0.9rem}
-.game-board{display:grid;grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));gap:18px;margin-bottom:30px}
-.card{background:linear-gradient(135deg, #2d2b55, #1e1b4b);border-radius:16px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.25s ease;border:2px solid #4c1d95;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.game-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;margin-bottom:30px}
+.card{background:linear-gradient(135deg,#2d2b55,#1e1b4b);border-radius:16px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.25s ease;border:2px solid #4c1d95;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
 .card:hover:not(.matched){transform:translateY(-6px);border-color:#8b5cf6;box-shadow:0 10px 25px -5px rgba(139,92,246,0.3)}
-.card.selected{background:linear-gradient(135deg, #4c1d95, #6d28d9);border-color:#f59e0b;transform:scale(1.02)}
+.card.selected{background:linear-gradient(135deg,#4c1d95,#6d28d9);border-color:#f59e0b;transform:scale(1.02)}
 .card.matched{opacity:0.5;cursor:default;transform:none;background:#1e293b;border-color:#334155}
 .card.wrong{border-color:#ef4444;animation:shake 0.3s ease}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
@@ -898,7 +941,7 @@ h1{text-align:center;color:#fff;font-size:2rem;margin-bottom:8px;letter-spacing:
 .badge{position:absolute;top:8px;left:8px;font-size:9px;padding:2px 8px;border-radius:20px;font-weight:700}
 .badge-nl{background:#f97316;color:#fff}
 .badge-pt{background:#10b981;color:#fff}
-.score-area{text-align:center;margin:20px 0;font-size:1.2rem;color:#34d399;background:rgba(0,0,0,0.3);padding:12px;border-radius:16px;max-width:300px;margin-left:auto;margin-right:auto}
+.score-area{text-align:center;margin:20px auto;font-size:1.2rem;color:#34d399;background:rgba(0,0,0,0.3);padding:12px;border-radius:16px;max-width:300px}
 .reset-btn{display:block;margin:20px auto;padding:12px 32px;background:#8b5cf6;color:#fff;border:none;border-radius:40px;font-size:1rem;font-weight:700;cursor:pointer;transition:0.2s}
 .reset-btn:hover{background:#7c3aed;transform:scale(1.02)}
 .victory{text-align:center;font-size:1.5rem;color:#fbbf24;margin-top:20px;padding:16px;background:rgba(0,0,0,0.4);border-radius:16px;display:none}
@@ -906,14 +949,13 @@ h1{text-align:center;color:#fff;font-size:2rem;margin-bottom:8px;letter-spacing:
 </head>
 <body>
 <div class="container">
-<h1>🎮 Jogo de Associação NL ↔ PT</h1>
+<h1>🎮 Jogo de Associação NL \u2194 PT</h1>
 <div class="subtitle">🇳🇱 Encontre o par correspondente em 🇵🇹</div>
 <div class="game-board" id="gameBoard"></div>
 <div class="score-area" id="scoreDisplay">Pares encontrados: 0 / ${totalPairs}</div>
 <button class="reset-btn" onclick="resetGame()">🔄 Reiniciar Jogo</button>
 <div class="victory" id="victoryMessage">🎉 PARABÉNS! VOCÊ COMPLETOU TODOS OS PARES! 🎉</div>
 </div>
-
 <script>
 const GAME_DATA = ${JSON.stringify(shuffledCards)};
 let currentCards = [];
@@ -947,29 +989,118 @@ function renderBoard() {
         const badgeText = card.type === 'nl' ? '🇳🇱 NL' : '🇵🇹 PT';
         const isSelected = (selectedIndex === idx);
         const isMatched = card.matched;
-        
         let imageHtml = '';
         if (card.image && !card.matched) {
             imageHtml = \`<img src="\${card.image}" alt="image" onerror="this.style.display='none'">\`;
         }
-        
-        return \`
-            <div class="card \${isMatched ? 'matched' : ''} \${isSelected ? 'selected' : ''}" onclick="handleCardClick(\${idx})">
-                <div class="badge \${badgeClass}">\${badgeText}</div>
-                \${imageHtml}
-                <div class="card-text">\${isMatched ? '✓' : card.text}</div>
-            </div>
-        \`;
+        return \`<div class="card \${isMatched ? 'matched' : ''} \${isSelected ? 'selected' : ''}" onclick="handleCardClick(\${idx})">
+            <div class="badge \${badgeClass}">\${badgeText}</div>
+            \${imageHtml}
+            <div class="card-text">\${isMatched ? '✓' : card.text}</div>
+        </div>\`;
     }).join('');
 }
 
 function handleCardClick(clickedIdx) {
     if (isLocked) return;
     if (currentCards[clickedIdx].matched) return;
-    
-    // Se clicou na mesma carta, desseleciona
+
     if (selectedIndex === clickedIdx) {
         selectedIndex = null;
         renderBoard();
         return;
-   
+    }
+
+    if (selectedIndex === null) {
+        selectedIndex = clickedIdx;
+        renderBoard();
+        return;
+    }
+
+    const first = currentCards[selectedIndex];
+    const second = currentCards[clickedIdx];
+
+    if (first.pairId === second.pairId && first.type !== second.type) {
+        currentCards[selectedIndex].matched = true;
+        currentCards[clickedIdx].matched = true;
+        matchedCount++;
+        selectedIndex = null;
+        updateScore();
+        renderBoard();
+        if (matchedCount === ${totalPairs}) {
+            setTimeout(() => {
+                document.getElementById('victoryMessage').style.display = 'block';
+            }, 500);
+        }
+    } else {
+        isLocked = true;
+        const prevSelected = selectedIndex;
+        selectedIndex = clickedIdx;
+        renderBoard();
+        const cards = document.querySelectorAll('.card');
+        if (cards[prevSelected]) cards[prevSelected].classList.add('wrong');
+        if (cards[clickedIdx]) cards[clickedIdx].classList.add('wrong');
+        setTimeout(() => {
+            selectedIndex = null;
+            isLocked = false;
+            renderBoard();
+        }, 800);
+    }
+}
+
+function updateScore() {
+    document.getElementById('scoreDisplay').textContent = 'Pares encontrados: ' + matchedCount + ' / ${totalPairs}';
+}
+
+function resetGame() { initGame(); }
+
+initGame();
+<\/script>
+</body>
+</html>`;
+}
+
+// ========== UTILITÁRIOS ==========
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showStatus(msg, type) {
+    statusMessage.style.display = 'flex';
+    statusMessage.className = 'status-bar ' + type;
+    if (type === 'loading') {
+        statusMessage.innerHTML = '<div class="spinner"></div>' + msg;
+    } else {
+        statusMessage.innerHTML = msg;
+    }
+}
+
+function copyGameCode() {
+    const code = gameCodeDisplay.textContent;
+    if (!code || code === 'Clique em "Gerar Jogo" para criar o HTML') {
+        showStatus('Gere o jogo primeiro!', 'error');
+        return;
+    }
+    navigator.clipboard.writeText(code).then(() => {
+        showStatus('✅ Código copiado!', 'success');
+    });
+}
+
+function downloadGameHTML() {
+    const code = gameCodeDisplay.textContent;
+    if (!code || code === 'Clique em "Gerar Jogo" para criar o HTML') {
+        showStatus('Gere o jogo primeiro!', 'error');
+        return;
+    }
+    const blob = new Blob([code], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'jogo-nl-pt.html';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
